@@ -70,7 +70,7 @@ struct ThumbnailPickerView: View {
         VStack(spacing: 8) {
             Group {
                 switch project.thumbnailType {
-                case .image:
+                case .image, .videoFrame:
                     if let data = project.thumbnailData, let nsImage = NSImage(data: data) {
                         Image(nsImage: nsImage)
                             .resizable()

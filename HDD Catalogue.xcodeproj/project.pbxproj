@@ -29,6 +29,30 @@
 		A10000010000000000000020 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020; };
 		A10000010000000000000021 /* ScanProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000021; };
 		A10000010000000000000022 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000022; };
+		A10000010000000000000023 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000025; };
+		A10000010000000000000024 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000026; };
+		A10000010000000000000025 /* ClientManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000027; };
+		A10000010000000000000026 /* UndoManagerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000028; };
+		A10000010000000000000027 /* AIThinkingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000029; };
+		A10000010000000000000030 /* MediaSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000030; };
+		A10000010000000000000031 /* VideoThumbnailService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000031; };
+		A10000010000000000000032 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032; };
+		A10000010000000000000033 /* TagInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000033; };
+		A10000010000000000000034 /* QuickSearchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000034; };
+		A10000010000000000000035 /* SmartBin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000035; };
+		A10000010000000000000036 /* SmartBinEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000036; };
+		A10000010000000000000037 /* RecentlyModifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000037; };
+		A10000010000000000000038 /* ProjectDrawerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000038; };
+		A10000010000000000000039 /* VisualSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000039; };
+		A10000010000000000000040 /* VisualSearchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000040; };
+		A10000010000000000000041 /* FindSimilarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000041; };
+		A10000010000000000000042 /* MediaFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000042; };
+		A10000010000000000000043 /* DeepMediaSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000043; };
+		A10000010000000000000044 /* DeepMediaSearchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000044; };
+		A10000010000000000000045 /* FileTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000045; };
+		A10000010000000000000046 /* OllamaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000046; };
+		A10000010000000000000047 /* MediaFileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000047; };
+		A10000010000000000000048 /* ProjectFileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000048; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,7 +80,31 @@
 		A20000010000000000000022 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000010000000000000023 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A20000010000000000000024 /* HDD_Catalogue.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HDD_Catalogue.entitlements; sourceTree = "<group>"; };
+		A20000010000000000000025 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		A20000010000000000000026 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
+		A20000010000000000000027 /* ClientManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientManagementView.swift; sourceTree = "<group>"; };
+		A20000010000000000000028 /* UndoManagerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoManagerService.swift; sourceTree = "<group>"; };
+		A20000010000000000000029 /* AIThinkingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIThinkingPanel.swift; sourceTree = "<group>"; };
 		A30000010000000000000001 /* HDD Catalogue.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "HDD Catalogue.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000010000000000000030 /* MediaSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaSummary.swift; sourceTree = "<group>"; };
+		A20000010000000000000031 /* VideoThumbnailService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoThumbnailService.swift; sourceTree = "<group>"; };
+		A20000010000000000000032 /* ProjectDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailView.swift; sourceTree = "<group>"; };
+		A20000010000000000000033 /* TagInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagInputView.swift; sourceTree = "<group>"; };
+		A20000010000000000000034 /* QuickSearchOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSearchOverlay.swift; sourceTree = "<group>"; };
+		A20000010000000000000035 /* SmartBin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartBin.swift; sourceTree = "<group>"; };
+		A20000010000000000000036 /* SmartBinEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartBinEditorView.swift; sourceTree = "<group>"; };
+		A20000010000000000000037 /* RecentlyModifiedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentlyModifiedView.swift; sourceTree = "<group>"; };
+		A20000010000000000000038 /* ProjectDrawerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDrawerView.swift; sourceTree = "<group>"; };
+		A20000010000000000000039 /* VisualSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualSearchService.swift; sourceTree = "<group>"; };
+		A20000010000000000000040 /* VisualSearchOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualSearchOverlay.swift; sourceTree = "<group>"; };
+		A20000010000000000000041 /* FindSimilarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindSimilarSheet.swift; sourceTree = "<group>"; };
+		A20000010000000000000042 /* MediaFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaFile.swift; sourceTree = "<group>"; };
+		A20000010000000000000043 /* DeepMediaSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepMediaSearchService.swift; sourceTree = "<group>"; };
+		A20000010000000000000044 /* DeepMediaSearchOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepMediaSearchOverlay.swift; sourceTree = "<group>"; };
+		A20000010000000000000045 /* FileTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeView.swift; sourceTree = "<group>"; };
+		A20000010000000000000046 /* OllamaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaService.swift; sourceTree = "<group>"; };
+		A20000010000000000000047 /* MediaFileExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaFileExplorerView.swift; sourceTree = "<group>"; };
+		A20000010000000000000048 /* ProjectFileExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFileExplorerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +148,9 @@
 				A20000010000000000000005 /* Client.swift */,
 				A20000010000000000000006 /* DuplicateGroup.swift */,
 				A20000010000000000000007 /* ColorPalette.swift */,
+				A20000010000000000000030 /* MediaSummary.swift */,
+				A20000010000000000000035 /* SmartBin.swift */,
+				A20000010000000000000042 /* MediaFile.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -112,6 +163,13 @@
 				A20000010000000000000010 /* GeminiService.swift */,
 				A20000010000000000000011 /* KeychainHelper.swift */,
 				A20000010000000000000012 /* ThumbnailManager.swift */,
+				A20000010000000000000025 /* NotificationService.swift */,
+				A20000010000000000000026 /* ExportService.swift */,
+				A20000010000000000000028 /* UndoManagerService.swift */,
+				A20000010000000000000031 /* VideoThumbnailService.swift */,
+				A20000010000000000000039 /* VisualSearchService.swift */,
+				A20000010000000000000043 /* DeepMediaSearchService.swift */,
+				A20000010000000000000046 /* OllamaService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -129,6 +187,20 @@
 				A20000010000000000000019 /* ProjectEditView.swift */,
 				A20000010000000000000020 /* SettingsView.swift */,
 				A20000010000000000000021 /* ScanProgressView.swift */,
+				A20000010000000000000027 /* ClientManagementView.swift */,
+				A20000010000000000000029 /* AIThinkingPanel.swift */,
+				A20000010000000000000032 /* ProjectDetailView.swift */,
+				A20000010000000000000033 /* TagInputView.swift */,
+				A20000010000000000000034 /* QuickSearchOverlay.swift */,
+				A20000010000000000000036 /* SmartBinEditorView.swift */,
+				A20000010000000000000037 /* RecentlyModifiedView.swift */,
+				A20000010000000000000038 /* ProjectDrawerView.swift */,
+				A20000010000000000000040 /* VisualSearchOverlay.swift */,
+				A20000010000000000000041 /* FindSimilarSheet.swift */,
+				A20000010000000000000044 /* DeepMediaSearchOverlay.swift */,
+				A20000010000000000000045 /* FileTreeView.swift */,
+				A20000010000000000000047 /* MediaFileExplorerView.swift */,
+				A20000010000000000000048 /* ProjectFileExplorerView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -231,6 +303,30 @@
 				A10000010000000000000019 /* ProjectEditView.swift in Sources */,
 				A10000010000000000000020 /* SettingsView.swift in Sources */,
 				A10000010000000000000021 /* ScanProgressView.swift in Sources */,
+				A10000010000000000000023 /* NotificationService.swift in Sources */,
+				A10000010000000000000024 /* ExportService.swift in Sources */,
+				A10000010000000000000025 /* ClientManagementView.swift in Sources */,
+				A10000010000000000000026 /* UndoManagerService.swift in Sources */,
+				A10000010000000000000027 /* AIThinkingPanel.swift in Sources */,
+				A10000010000000000000030 /* MediaSummary.swift in Sources */,
+				A10000010000000000000031 /* VideoThumbnailService.swift in Sources */,
+				A10000010000000000000032 /* ProjectDetailView.swift in Sources */,
+				A10000010000000000000033 /* TagInputView.swift in Sources */,
+				A10000010000000000000034 /* QuickSearchOverlay.swift in Sources */,
+				A10000010000000000000035 /* SmartBin.swift in Sources */,
+				A10000010000000000000036 /* SmartBinEditorView.swift in Sources */,
+				A10000010000000000000037 /* RecentlyModifiedView.swift in Sources */,
+				A10000010000000000000038 /* ProjectDrawerView.swift in Sources */,
+				A10000010000000000000039 /* VisualSearchService.swift in Sources */,
+				A10000010000000000000040 /* VisualSearchOverlay.swift in Sources */,
+				A10000010000000000000041 /* FindSimilarSheet.swift in Sources */,
+				A10000010000000000000042 /* MediaFile.swift in Sources */,
+				A10000010000000000000043 /* DeepMediaSearchService.swift in Sources */,
+				A10000010000000000000044 /* DeepMediaSearchOverlay.swift in Sources */,
+				A10000010000000000000045 /* FileTreeView.swift in Sources */,
+				A10000010000000000000046 /* OllamaService.swift in Sources */,
+				A10000010000000000000047 /* MediaFileExplorerView.swift in Sources */,
+				A10000010000000000000048 /* ProjectFileExplorerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

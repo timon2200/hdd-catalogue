@@ -18,7 +18,7 @@ enum ThumbnailManager {
     }
     
     /// Resize an NSImage to fit within maxSize while maintaining aspect ratio.
-    private static func resizeImage(_ image: NSImage, maxSize: CGFloat) -> Data? {
+    static func resizeImage(_ image: NSImage, maxSize: CGFloat) -> Data? {
         let originalSize = image.size
         guard originalSize.width > 0, originalSize.height > 0 else { return nil }
         

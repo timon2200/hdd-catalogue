@@ -42,7 +42,7 @@ final class DriveMonitor {
         syncConnectedDrives()
         
         // Listen for mount events
-        mountObserver = NotificationCenter.default.addObserver(
+        mountObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didMountNotification,
             object: nil,
             queue: .main
@@ -56,7 +56,7 @@ final class DriveMonitor {
         }
         
         // Listen for unmount events
-        unmountObserver = NotificationCenter.default.addObserver(
+        unmountObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didUnmountNotification,
             object: nil,
             queue: .main
@@ -71,11 +71,11 @@ final class DriveMonitor {
     
     func stopMonitoring() {
         if let observer = mountObserver {
-            NotificationCenter.default.removeObserver(observer)
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
             mountObserver = nil
         }
         if let observer = unmountObserver {
-            NotificationCenter.default.removeObserver(observer)
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
             unmountObserver = nil
         }
         isMonitoring = false

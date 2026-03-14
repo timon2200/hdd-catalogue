@@ -7,6 +7,7 @@ struct DuplicateResolutionView: View {
     let onDismiss: () -> Void
     
     @Environment(\.modelContext) private var modelContext
+    @Environment(UndoManagerService.self) private var undoService
     @State private var selectedGroupIndex = 0
     
     var currentGroup: DuplicateGroup? {
@@ -88,6 +89,7 @@ struct DuplicateResolutionView: View {
                 // Action buttons
                 HStack(spacing: 12) {
                     Button("Dismiss") {
+                        undoService.registerDismissal(group: group, context: modelContext)
                         group.isDismissed = true
                         try? modelContext.save()
                         moveToNextGroup()
@@ -113,6 +115,7 @@ struct DuplicateResolutionView: View {
                     }
                     
                     Button("Dismiss All") {
+                        undoService.registerDismissAll(groups: duplicateGroups, context: modelContext)
                         for g in duplicateGroups {
                             g.isDismissed = true
                         }

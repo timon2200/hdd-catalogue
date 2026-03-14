@@ -81,20 +81,23 @@ HDD Catalogue/
 │   ├── Drive.swift                  # External drive metadata (@Model)
 │   ├── Project.swift                # Catalogued project folder (@Model)
 │   ├── Client.swift                 # AI-detected or manual client (@Model)
+│   ├── MediaFile.swift              # Deep-indexed file metadata (@Model)
 │   ├── DuplicateGroup.swift         # Cross-drive duplicate groups (@Model)
 │   └── ColorPalette.swift           # 20 curated client colors
 ├── Services/
 │   ├── DriveMonitor.swift           # NSWorkspace mount/unmount listener
-│   ├── ScanEngine.swift             # Async folder enumeration + metadata
+│   ├── ScanEngine.swift             # Async folder enumeration + deep file indexing
 │   ├── GeminiService.swift          # Gemini 2.0 Flash API integration
+│   ├── QwenService.swift            # Local Qwen AI for camera/color detection
 │   ├── KeychainHelper.swift         # Secure API key storage
 │   └── ThumbnailManager.swift       # Image processing + emoji/SF Symbol data
 └── Views/
     ├── ContentView.swift            # NavigationSplitView — sidebar + detail
     ├── MenuBarView.swift            # Menu bar dropdown UI
     ├── SidebarView.swift            # Drive list + client list + alerts
-    ├── CatalogueGridView.swift      # Grid/list toggle + client legend bar
+    ├── CatalogueGridView.swift      # Grid/list toggle + unified search results
     ├── ProjectCardView.swift        # Individual card with drag-drop thumbnail
+    ├── ProjectFileExplorerView.swift # Full file explorer with info panel
     ├── ProjectEditView.swift        # Edit sheet — name, client, type, notes
     ├── ThumbnailPickerView.swift    # Three-tab thumbnail picker
     ├── DuplicateResolutionView.swift # Side-by-side duplicate comparison
@@ -109,14 +112,35 @@ HDD Catalogue/
 ### Core
 - **Menu Bar Agent** — Lives in the menu bar (`LSUIElement`), always accessible without cluttering the Dock
 - **Auto-Scan on Mount** — Detects drive connections via `NSWorkspace` notifications and scans immediately
-- **Offline Catalogue** — All project metadata persists via SwiftData, searchable even when drives are disconnected
+- **Deep File Indexing** — Indexes every media file with codec, resolution, frame rate, bitrate, duration, and camera metadata
+- **Offline Catalogue** — All project and file metadata persists via SwiftData, searchable even when drives are disconnected
 - **Shared ModelContainer** — Single SwiftData container shared across all scenes for consistent data
 
-### AI-Powered (Google Gemini 2.0 Flash)
-- **Project Categorization** — Identifies project type (Web Design, Video Edit, Photography, 3D/Motion, Development, Branding, Music/Audio, Documentation) from folder names and metadata
-- **Client Detection** — Recognizes naming patterns to group projects by client, matching against existing clients first
-- **Duplicate Detection** — Finds the same project across multiple drives, identifies the latest version, and suggests actions
-- **Privacy-First** — Only folder names, sizes, and dates are sent to the API. Never file contents
+### Unified Search
+- **Single Search Bar** — One search bar that works everywhere — catalogue view and file explorer
+- **Project Search** — Search across project names, folder names, types, AI summaries, client names, drive names, tags, and notes
+- **Clip/File Search** — Search individual files by filename, codec, camera model, color space, resolution, visual tags, and AI descriptions
+- **Match Context** — Each file result shows WHY it matched (e.g., "AI Description: …bustling **market** scene…") with the query highlighted in cyan
+- **Thumbnails in Results** — File search results show real video frame / image thumbnails, loaded sequentially
+- **Click to Explore** — Clicking a file result opens the full file explorer navigated to that file with its info panel open
+
+### File Explorer
+- **Three-Panel Layout** — Folder tree sidebar, file grid/list, and detail info panel
+- **Rich Metadata Panel** — Shows file info, video specs (resolution, codec, frame rate, bitrate, bit depth), camera info (model, lens, log/gamma, color gamut), and audio track details
+- **Video Scrubbing** — Hover over video thumbnails to scrub through frames
+- **Sequential Thumbnails** — Thumbnails load one-by-one via rate-limited actor queue to avoid overwhelming the system with large RAW folders
+
+### AI-Powered
+- **Project Categorization** (Gemini 2.0 Flash) — Identifies project type, client, and generates summaries from folder structure and metadata
+- **Camera Auto-Detection** (Qwen 3.5) — Analyzes one clip per camera folder to detect camera model, color profile (S-Log3, D-Log M, etc.), and codec. Results apply to all files in that folder
+- **Visual Tagging** (Qwen 3.5) — AI-generated visual tags and descriptions for each clip (e.g., "sunset", "interview", "aerial")
+- **Duplicate Detection** — Finds the same project across multiple drives, identifies the latest version
+- **Privacy-First** — Only folder names, sizes, and dates are sent to cloud AI. Visual analysis uses local Qwen model
+
+### LOG → Rec.709 Color Conversion
+- **One-Click Toggle** — Button to enable/disable LOG to Rec.709 color conversion in preview and scrubbing
+- **Per-Camera LUTs** — Automatically selects the correct LUT based on detected camera profile (S-Log3, D-Log M, etc.)
+- **Real-Time Preview** — CoreImage-based LUT application for instant visual feedback
 
 ### UI
 - **Grid + List Views** — Toggle between visual card grid and compact list
@@ -125,7 +149,8 @@ HDD Catalogue/
 - **Project Editing** — Override any AI suggestion; edited projects are protected from future AI overwrites (`isEdited` flag)
 - **Duplicate Resolution** — Side-by-side comparison with latest-version badges, dismiss/resolve actions
 - **Animated Scan Progress** — Circular progress ring with pulse animation, per-folder updates, and percentage display
-- **Full-Text Search** — Search across project names, folder names, types, AI summaries, client names, and drive names
+- **Smart Bins** — Auto-filtered project groups (e.g., "Recent", "Large Projects", "Needs Review")
+- **Dashboard View** — Stats header with project counts, total size, and camera distribution
 
 ### Security
 - **Keychain Storage** — API key stored securely in macOS Keychain via `Security.framework`
@@ -169,10 +194,13 @@ open "HDD Catalogue.xcodeproj"
 | **Language** | Swift 5.9+ |
 | **UI Framework** | SwiftUI |
 | **Data Persistence** | SwiftData (`@Model`, `@Query`, `ModelContainer`) |
-| **AI** | Google Gemini 2.0 Flash (REST API) |
+| **Cloud AI** | Google Gemini 2.0 Flash (REST API) |
+| **Local AI** | Qwen 3.5 0.8B / 4B via Ollama (camera detection, visual tagging) |
+| **Color Science** | CoreImage + .cube/.3dl LUT application |
+| **Media Analysis** | AVFoundation (`AVAssetImageGenerator`, `AVAssetTrack`) |
 | **Security** | macOS Keychain (`Security.framework`) |
 | **Drive Detection** | `NSWorkspace` mount/unmount notifications |
-| **Concurrency** | Swift Concurrency (`async/await`, `@MainActor`) |
+| **Concurrency** | Swift Concurrency (`async/await`, `@MainActor`, Actors) |
 | **Architecture** | `@Observable` services, `@Query`-driven views |
 
 ---
@@ -183,6 +211,7 @@ open "HDD Catalogue.xcodeproj"
 erDiagram
     Drive ||--o{ Project : contains
     Client ||--o{ Project : owns
+    Project ||--o{ MediaFile : indexes
     DuplicateGroup ||--o{ Project : groups
 
     Drive {
@@ -215,6 +244,20 @@ erDiagram
         String thumbnailIconName
     }
 
+    MediaFile {
+        UUID id PK
+        String filename
+        String relativePath
+        String fileExtension
+        Int64 fileSize
+        String codec
+        String resolution
+        String cameraModel
+        String colorSpace
+        String visualDescription
+        Array visualTags
+    }
+
     Client {
         UUID id PK
         String name
@@ -237,22 +280,22 @@ erDiagram
 ## 🛣️ Roadmap
 
 ### High Priority
-- [ ] Launch at Login via `SMAppService`
-- [ ] Wire `autoScanOnMount` setting to `DriveMonitor`
-- [ ] Wire `scanDepth` setting to `ScanEngine`
+- [x] Launch at Login via `SMAppService`
+- [x] Wire `autoScanOnMount` setting to `DriveMonitor`
+- [x] Wire `scanDepth` setting to `ScanEngine`
 - [ ] App icon design
 
 ### Medium Priority
-- [ ] System notifications for scan completion and new drives
-- [ ] Delete projects, drives, and clients from UI
-- [ ] Client management (rename, recolor, merge)
-- [ ] Export catalogue to CSV/JSON
-- [ ] Advanced filtering (date range, size, type)
+- [x] System notifications for scan completion and new drives
+- [x] Delete projects, drives, and clients from UI
+- [x] Client management (rename, recolor, merge)
+- [x] Export catalogue to CSV/JSON
+- [x] Advanced filtering (date range, size, type)
 
 ### Future
 - [ ] IOKit-based drive serial number and type detection
-- [ ] Undo support for edits and dismissals
-- [ ] Multi-level scan depth (nested project discovery)
+- [x] Undo support for edits and dismissals
+- [x] Multi-level scan depth (nested project discovery)
 - [ ] Accessibility / VoiceOver labels
 - [ ] Unit and UI tests
 

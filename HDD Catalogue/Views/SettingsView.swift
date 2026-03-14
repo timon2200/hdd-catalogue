@@ -1,16 +1,21 @@
 import SwiftUI
+import SwiftData
+import ServiceManagement
 
 /// Settings view for API key, scan preferences, and launch-at-login.
 struct SettingsView: View {
-    @State private var apiKey: String = ""
-    @State private var scanDepth: Int = 2
-    @State private var showAPIKey = false
-    @State private var keySaved = false
+    @State private var scanDepth: Int = 1
+    @State private var loginItemError: String?
     
-    @AppStorage("scanDepth") private var storedScanDepth = 2
+    @AppStorage("scanDepth") private var storedScanDepth = 1
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     @AppStorage("autoScanOnMount") private var autoScanOnMount = true
     @AppStorage("showNotifications") private var showNotifications = true
+    @AppStorage("enableVisualIndexing") private var enableVisualIndexing = true
+    @AppStorage("ollamaModel") private var ollamaModel = "qwen3.5:0.8b"
+    @AppStorage("ollamaReasoningModel") private var ollamaReasoningModel = "qwen3.5:4b"
+    @State private var showRebuildConfirm = false
+    @State private var ollamaAvailable = false
     
     var body: some View {
         TabView {
@@ -29,9 +34,8 @@ struct SettingsView: View {
                     Label("Scanning", systemImage: "doc.viewfinder")
                 }
         }
-        .frame(width: 480, height: 340)
+        .frame(width: 480, height: 380)
         .onAppear {
-            apiKey = KeychainHelper.getAPIKey()
             scanDepth = storedScanDepth
         }
     }
@@ -45,6 +49,12 @@ struct SettingsView: View {
                     .onChange(of: launchAtLogin) { _, newValue in
                         toggleLaunchAtLogin(newValue)
                     }
+                
+                if let error = loginItemError {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
                 
                 Toggle("Show Notifications", isOn: $showNotifications)
                 
@@ -64,6 +74,28 @@ struct SettingsView: View {
             } header: {
                 Text("About")
             }
+            
+            Section {
+                Button(role: .destructive) {
+                    showRebuildConfirm = true
+                } label: {
+                    Label("Rebuild Database", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .alert("Rebuild Database?", isPresented: $showRebuildConfirm) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Rebuild", role: .destructive) {
+                        rebuildDatabase()
+                    }
+                } message: {
+                    Text("This will delete all catalogued projects, clients, and thumbnails. The app will quit and you'll need to re-scan your drives.\n\nFiles on disk are never affected.")
+                }
+                
+                Text("Deletes all app data and restarts fresh. Use this to fix corrupted data or duplicate clients.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Danger Zone")
+            }
         }
         .formStyle(.grouped)
         .padding()
@@ -74,54 +106,70 @@ struct SettingsView: View {
     private var aiTab: some View {
         Form {
             Section {
-                HStack {
-                    Group {
-                        if showAPIKey {
-                            TextField("Gemini API Key", text: $apiKey)
-                        } else {
-                            SecureField("Gemini API Key", text: $apiKey)
-                        }
+                Picker("Vision Model", selection: $ollamaModel) {
+                    ForEach(OllamaService.supportedModels) { model in
+                        Text("\(model.name) (\(model.size))")
+                            .tag(model.id)
                     }
-                    .textFieldStyle(.roundedBorder)
-                    
-                    Button {
-                        showAPIKey.toggle()
-                    } label: {
-                        Image(systemName: showAPIKey ? "eye.slash" : "eye")
-                    }
-                    .buttonStyle(.borderless)
                 }
+                Text("Used for image descriptions during deep indexing. Smaller = faster.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                
+                Picker("Reasoning Model", selection: $ollamaReasoningModel) {
+                    ForEach(OllamaService.supportedModels) { model in
+                        Text("\(model.name) (\(model.size))")
+                            .tag(model.id)
+                    }
+                }
+                Text("Used for project categorization, duplicate detection, and AI search. Bigger = smarter.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 
                 HStack {
-                    if keySaved {
-                        Label("Key saved securely in Keychain", systemImage: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                    }
-                    
+                    Circle()
+                        .fill(ollamaAvailable ? .green : .red)
+                        .frame(width: 8, height: 8)
+                    Text(ollamaAvailable ? "Ollama is running" : "Ollama not detected")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Spacer()
-                    
-                    Button("Save Key") {
-                        KeychainHelper.saveAPIKey(apiKey)
-                        keySaved = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                            keySaved = false
+                    Button("Check") {
+                        Task {
+                            let service = OllamaService()
+                            service.currentModel = ollamaModel
+                            await service.checkAvailability()
+                            ollamaAvailable = service.isAvailable
                         }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(apiKey.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .font(.caption)
                 }
+                
+                Text("Install [Ollama](https://ollama.com) and pull models:\n`ollama pull qwen3.5:0.8b` (vision)\n`ollama pull qwen3.5:4b` (reasoning)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } header: {
-                Text("Google Gemini API")
-            } footer: {
-                Text("Your API key is stored securely in the macOS Keychain. Get a free key at [aistudio.google.com](https://aistudio.google.com)")
+                Text("Local AI (Ollama + Qwen 3.5)")
             }
             
             Section {
+                Toggle("Enable Visual Indexing", isOn: $enableVisualIndexing)
+                
+                Text("Project thumbnails are analyzed on-device using Apple Vision for visual search tags. Enables AI Visual Search (⌘⇧F) and Find Similar.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Visual Search")
+            }
+            
+            Section {
+                Text("• All AI runs 100% locally via Ollama — no data leaves your Mac")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Text("• AI analyzes folder names, sizes, and dates — never file contents")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("• Data is sent to Google's Gemini API for categorization")
+                Text("• Visual tagging uses Apple Vision (on-device, no network)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text("• You can manually override any AI suggestion")
@@ -133,6 +181,14 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .onAppear {
+            Task {
+                let service = OllamaService()
+                service.currentModel = ollamaModel
+                await service.checkAvailability()
+                ollamaAvailable = service.isAvailable
+            }
+        }
     }
     
     // MARK: - Scan Tab
@@ -145,7 +201,7 @@ struct SettingsView: View {
                         storedScanDepth = newValue
                     }
                 
-                Text("How deep into each drive's folder structure to scan for projects.")
+                Text("Level 1 = projects at drive root. Increase if projects are nested inside organization folders.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } header: {
@@ -173,7 +229,33 @@ struct SettingsView: View {
     // MARK: - Helpers
     
     private func toggleLaunchAtLogin(_ enabled: Bool) {
-        // In a real app, use SMAppService.mainApp.register() / unregister()
-        // Requires proper entitlements and signing
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+            loginItemError = nil
+        } catch {
+            loginItemError = "Failed to update login item: \(error.localizedDescription)"
+            // Revert the toggle on failure
+            launchAtLogin = !enabled
+        }
+    }
+    private func rebuildDatabase() {
+        // Find and delete the SwiftData store files
+        let config = ModelConfiguration("HDD_Catalogue", isStoredInMemoryOnly: false)
+        let storeURL = config.url
+        let fm = FileManager.default
+        for suffix in ["", "-wal", "-shm"] {
+            let fileURL = URL(fileURLWithPath: storeURL.path + suffix)
+            try? fm.removeItem(at: fileURL)
+        }
+        
+        // Quit the app so it restarts with a fresh store
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            NSApplication.shared.terminate(nil)
+        }
     }
 }
+

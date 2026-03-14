@@ -83,21 +83,32 @@ HDD Catalogue/
 │   ├── Project.swift                # Catalogued project folder (@Model)
 │   ├── Client.swift                 # AI-detected or manual client (@Model)
 │   ├── MediaFile.swift              # Deep-indexed file metadata (@Model)
+│   ├── MediaSummary.swift           # Aggregated media stats per project
 │   ├── DuplicateGroup.swift         # Cross-drive duplicate groups (@Model)
+│   ├── SmartBin.swift               # Dynamic filter-based project groups (@Model)
 │   └── ColorPalette.swift           # 20 curated client colors
 ├── Services/
 │   ├── DriveMonitor.swift           # NSWorkspace mount/unmount listener
 │   ├── ScanEngine.swift             # Async folder enumeration + deep file indexing
 │   ├── GeminiService.swift          # Gemini 2.0 Flash API integration
-│   ├── QwenService.swift            # Local Qwen AI for camera/color detection
+│   ├── OllamaService.swift          # Local Ollama AI for vision tasks
+│   ├── OllamaSetupService.swift     # Model pull/status management for Ollama
+│   ├── CheckForUpdatesViewModel.swift # Sparkle OTA update view model
+│   ├── DeepMediaSearchService.swift # File-level deep indexing service
+│   ├── VisualSearchService.swift    # Apple Vision-based visual search
+│   ├── VideoThumbnailService.swift  # Video frame thumbnail generation
 │   ├── KeychainHelper.swift         # Secure API key storage
-│   └── ThumbnailManager.swift       # Image processing + emoji/SF Symbol data
+│   ├── ThumbnailManager.swift       # Image processing + emoji/SF Symbol data
+│   ├── NotificationService.swift    # macOS system notifications
+│   ├── ExportService.swift          # CSV / JSON export
+│   └── UndoManagerService.swift     # Undo/redo support
 └── Views/
     ├── ContentView.swift            # NavigationSplitView — sidebar + detail
     ├── MenuBarView.swift            # Menu bar dropdown UI
     ├── SidebarView.swift            # Drive list + client list + alerts
     ├── CatalogueGridView.swift      # Grid/list toggle + unified search results
     ├── ProjectCardView.swift        # Individual card with drag-drop thumbnail
+    ├── ProjectDrawerView.swift      # Side drawer for project details
     ├── ProjectFileExplorerView.swift # Full file explorer with info panel
     ├── ProjectEditView.swift        # Edit sheet — name, client, type, notes
     ├── ThumbnailPickerView.swift    # Three-tab thumbnail picker
@@ -107,9 +118,12 @@ HDD Catalogue/
     ├── ArchiveSuggestionsView.swift  # AI-powered archive recommendations
     ├── DriveComparisonView.swift    # Side-by-side drive comparison
     ├── FileTypeSearchView.swift     # Cross-drive file type search
+    ├── SmartBinEditorView.swift     # Smart bin rule editor
     ├── TagColorHelper.swift         # Shared tag color utilities
     ├── TagInputView.swift           # Tag input with autocomplete
-    └── SettingsView.swift           # General / AI / Scanning tabs
+    ├── QuickSearchOverlay.swift     # ⌘K quick search
+    ├── AIThinkingPanel.swift        # AI reasoning display panel
+    └── SettingsView.swift           # General / AI / Scanning / Ollama tabs
 ```
 
 ---
@@ -309,6 +323,8 @@ See [ROADMAP.md](ROADMAP.md) for the full feature roadmap with phases.
 - [x] File Type Search across all drives
 - [x] Favorites / Pinning with sort controls
 - [x] Premium hover animations and gradient capacity bars
+- [x] Ollama setup service with model pull management
+- [x] CI/CD release pipeline via GitHub Actions
 
 ### Up Next
 - [ ] App icon design

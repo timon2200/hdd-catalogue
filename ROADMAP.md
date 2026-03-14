@@ -24,6 +24,7 @@
 - [x] Export to CSV / JSON
 - [x] Advanced filtering (type, date range, size)
 - [x] Undo / Redo for project edits, client changes, thumbnail changes, deletions, and merges (⌘Z via `UndoManagerService`)
+- [x] Camera auto-detection per folder via local Qwen AI (detects camera model, color profile, codec from a single sample clip)
 
 ### Phase 1 — Video Editor Essentials ✅
 - [x] **NLE Project Detection** — scans for `.prproj`, `.fcpbundle`/`.fcpxml`, `.drp`, `.aep`, `.sesx`, `.mogrt`; shows NLE icon badges on cards; NLE is a filterable property; uses NLE project file date as the project's last-modified date
@@ -40,17 +41,15 @@
 
 > Find anything instantly, track project status.
 
-### 🔍 Global Quick Search (⌘K) ✅
-- [x] Spotlight-style overlay search across all drives (including disconnected)
-- [x] Search by project name, client, type, NLE, tags, notes, cameras, status
-- [x] Keyboard-navigable results with instant preview (↑↓ navigate, ↩ open, ⌘↩ Finder)
-- [x] Jump to project card or reveal in Finder
-
-### 🧠 AI Visual Search *(inspired by Diem)* ✅
-- [x] Search by visual content — objects, moods, scenes ("sunset", "interview", "underwater")
-- [x] Use Gemini Vision or CLIP embeddings to index thumbnails and video frames
-- [x] "Find similar" — select a clip/image and surface visually similar files across all drives
-- [x] Natural language queries ("all Premiere projects from last month over 10GB")
+### 🔍 Unified Search ✅
+- [x] Single search bar that works everywhere — catalogue view and file explorer
+- [x] Search projects by name, client, type, NLE, tags, notes, cameras, status, AI summaries
+- [x] Search individual clips/files by filename, codec, camera model, color space, resolution, visual tags, and AI descriptions
+- [x] Match context — each file result shows WHY it matched (e.g., "AI Description: …bustling **market** scene…") with query highlighted in cyan
+- [x] Thumbnails in search results — real video frame / image thumbnails loaded sequentially
+- [x] Click-to-explore — clicking a file result opens the file explorer navigated to that file with info panel open
+- [x] File explorer search enhanced to match MediaFile metadata (visual tags, AI descriptions, codec, camera, color space)
+- [x] Consolidated from 3 separate search overlays (Visual Search, Deep Media Search, file search) into one unified bar
 
 ### 🏷️ Tag System ✅
 - [x] Custom user tags per project (e.g. `#urgent`, `#archived`, `#youtube`)
@@ -117,12 +116,15 @@
 - [ ] Find all projects containing `.mogrt`, `.prproj`, `.r3d`, etc.
 - [ ] Results grouped by drive with file counts
 
-### 🔬 Deep File Metadata Inspector *(inspired by Diem)*
-- [ ] Per-file metadata panel: codec, pixel format, bitrate, frame rate, resolution
-- [ ] Camera info: model, lens, ISO, shutter speed, white balance
+### 🔬 Deep File Metadata Inspector ✅ *(inspired by Diem)*
+- [x] Per-file metadata panel: codec, pixel format, bitrate, frame rate, resolution
+- [x] Camera info: model, lens, log/gamma, color gamut (auto-detected via Qwen AI)
+- [x] Color space and gamma info for professional grading workflows
+- [x] Three-panel file explorer: folder tree, file grid/list, detail info panel
+- [x] Video scrubbing: hover over thumbnails to scrub through frames
+- [x] Sequential thumbnail loading via rate-limited actor queue
 - [ ] Timecode display for video files
 - [ ] GPS location extraction (from EXIF/XMP) with coordinates display
-- [ ] Color space and gamma info for professional grading workflows
 
 ---
 
@@ -213,10 +215,12 @@
 - [ ] Support for standard RAW photo formats (`.arw`, `.cr3`, `.dng`, `.nef`)
 - [ ] Smooth scrubbing and frame-accurate preview
 
-### 🎨 LUT Preview Overlay
-- [ ] Apply viewing LUTs (`.cube`, `.3dl`) to LOG footage during preview
-- [ ] Preset LUT library (S-Log3, V-Log, C-Log, etc.)
-- [ ] Non-destructive — LUTs are for preview only, never baked in
+### 🎨 LUT Preview Overlay ✅
+- [x] Apply viewing LUTs (`.cube`, `.3dl`) to LOG footage during preview and scrubbing
+- [x] One-click toggle button for LOG → Rec.709 color conversion
+- [x] Per-camera LUT selection based on auto-detected color profile (S-Log3, D-Log M, etc.)
+- [x] CoreImage-based real-time LUT application
+- [x] Non-destructive — LUTs are for preview only, never baked in
 
 ### 🔧 In-App Stabilization
 - [ ] Gyroscope-based stabilization for action/drone footage (Gyroflow-style)

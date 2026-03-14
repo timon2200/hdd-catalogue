@@ -17,6 +17,7 @@ struct SettingsView: View {
     @AppStorage("autoCheckForUpdates") private var autoCheckForUpdates = true
     @AppStorage("ollamaModel") private var ollamaModel = "qwen3.5:0.8b"
     @AppStorage("ollamaReasoningModel") private var ollamaReasoningModel = "qwen3.5:4b"
+    @AppStorage("deepScanMode") private var deepScanMode = "frames"
     @State private var showRebuildConfirm = false
     @State private var setupService = OllamaSetupService()
     @State private var showUninstallConfirm = false
@@ -137,6 +138,27 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             } header: {
                 Text("Visual Search")
+            }
+            
+            // Section 5: Deep Indexing Mode
+            Section {
+                Picker("Video Analysis", selection: $deepScanMode) {
+                    Text("Frames Only").tag("frames")
+                    Text("Enhanced Motion").tag("motion")
+                }
+                .pickerStyle(.radioGroup)
+                
+                if deepScanMode == "frames" {
+                    Text("Sends 2 keyframes (start + end) to the AI. Fast, works well for static shots.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Sends a short downscaled video clip to the AI for real motion understanding. Slower but accurately detects camera movement, pans, tilts, and tracking shots.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Deep Indexing")
             }
             
             // Section 5: Privacy

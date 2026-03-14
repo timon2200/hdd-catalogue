@@ -95,6 +95,7 @@ HDD Catalogue/
 │   ├── OllamaSetupService.swift     # Model pull/status management for Ollama
 │   ├── CheckForUpdatesViewModel.swift # Sparkle OTA update view model
 │   ├── DeepMediaSearchService.swift # File-level deep indexing service
+│   ├── XattrMetadataService.swift  # Extended attribute metadata persistence
 │   ├── VisualSearchService.swift    # Apple Vision-based visual search
 │   ├── VideoThumbnailService.swift  # Video frame thumbnail generation
 │   ├── KeychainHelper.swift         # Secure API key storage
@@ -135,6 +136,8 @@ HDD Catalogue/
 - **Auto-Scan on Mount** — Detects drive connections via `NSWorkspace` notifications and scans immediately
 - **Deep File Indexing** — Indexes every media file with codec, resolution, frame rate, bitrate, duration, and camera metadata
 - **Offline Catalogue** — All project and file metadata persists via SwiftData, searchable even when drives are disconnected
+- **Offline File Browsing** — Browse folder trees and search files from the local index even when drives are disconnected (📦 Offline badge)
+- **File Metadata Persistence** — AI metadata (descriptions, tags, face count, detected text) is written to files as macOS extended attributes (`xattr`), surviving database rebuilds and traveling with files
 - **Shared ModelContainer** — Single SwiftData container shared across all scenes for consistent data
 
 ### Unified Search
@@ -148,6 +151,9 @@ HDD Catalogue/
 ### File Explorer
 - **Three-Panel Layout** — Folder tree sidebar, file grid/list, and detail info panel
 - **Rich Metadata Panel** — Shows file info, video specs (resolution, codec, frame rate, bitrate, bit depth), camera info (model, lens, log/gamma, color gamut), and audio track details
+- **Per-Folder AI Scanning** — "Scan Folder" dropdown button scans only the current folder with choice of scan mode
+- **Dual Deep Scan Modes** — Choose between "Frames Only" (fast, 2 keyframes) and "Enhanced Motion" (exports short video clip for Qwen analysis)
+- **Stop Indexing** — Red stop button in the progress panel to gracefully halt any scan in progress
 - **Video Scrubbing** — Hover over video thumbnails to scrub through frames
 - **Sequential Thumbnails** — Thumbnails load one-by-one via rate-limited actor queue to avoid overwhelming the system with large RAW folders
 
@@ -155,6 +161,7 @@ HDD Catalogue/
 - **Project Categorization** (Gemini 2.0 Flash) — Identifies project type, client, and generates summaries from folder structure and metadata
 - **Camera Auto-Detection** (Qwen 3.5) — Analyzes one clip per camera folder to detect camera model, color profile (S-Log3, D-Log M, etc.), and codec. Results apply to all files in that folder
 - **Visual Tagging** (Qwen 3.5) — AI-generated visual tags and descriptions for each clip (e.g., "sunset", "interview", "aerial")
+- **Enhanced Motion Analysis** (Qwen 3.5) — Exports short downscaled video clips to Qwen for accurate camera motion detection (pan, tilt, tracking, handheld)
 - **Duplicate Detection** — Finds the same project across multiple drives, identifies the latest version
 - **Privacy-First** — Only folder names, sizes, and dates are sent to cloud AI. Visual analysis uses local Qwen model
 
@@ -231,7 +238,8 @@ Requires **macOS 14.0+** and **Xcode 15.0+**.
 | **Cloud AI** | Google Gemini 2.0 Flash (REST API) |
 | **Local AI** | Qwen 3.5 0.8B / 4B via Ollama (camera detection, visual tagging) |
 | **Color Science** | CoreImage + .cube/.3dl LUT application |
-| **Media Analysis** | AVFoundation (`AVAssetImageGenerator`, `AVAssetTrack`) |
+| **Media Analysis** | AVFoundation (`AVAssetImageGenerator`, `AVAssetExportSession`) |
+| **File Metadata** | macOS Extended Attributes (`setxattr` / `getxattr`) |
 | **Security** | macOS Keychain (`Security.framework`) |
 | **Drive Detection** | `NSWorkspace` mount/unmount notifications |
 | **Concurrency** | Swift Concurrency (`async/await`, `@MainActor`, Actors) |
@@ -316,6 +324,11 @@ erDiagram
 See [ROADMAP.md](ROADMAP.md) for the full feature roadmap with phases.
 
 ### Recently Completed
+- [x] Dual deep scan modes (Frames Only / Enhanced Motion with video clip export)
+- [x] Per-folder AI scanning from file explorer
+- [x] File metadata persistence via macOS extended attributes (xattr)
+- [x] Offline file browsing and search from local index
+- [x] Stop indexing button in progress panels
 - [x] Over-the-air updates via Sparkle + GitHub Releases
 - [x] Storage Dashboard with per-client breakdown, SSD/HDD tracking, growth trends
 - [x] AI-powered Archive Suggestions with space savings report

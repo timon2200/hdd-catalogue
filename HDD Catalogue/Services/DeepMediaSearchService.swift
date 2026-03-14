@@ -25,6 +25,18 @@ final class DeepMediaSearchService {
     var indexingFilesProcessed: Int = 0
     var indexingFilesTotal: Int = 0
     var indexingStatus: String = ""
+    var indexingEstimatedTimeRemaining: String = ""
+    var indexingElapsedTime: String = ""
+    var shouldStopIndexing: Bool = false
+    
+    /// Request indexing to stop gracefully.
+    func stopIndexing() {
+        shouldStopIndexing = true
+    }
+    
+    // Timing (not observable — internal bookkeeping)
+    private var indexingStartDate: Date?
+    private var projectStartDate: Date?
     
     // MARK: - Constants
     
@@ -45,7 +57,7 @@ final class DeepMediaSearchService {
     /// Deep-index all files in a single project.
     /// Extracts per-file metadata, visual tags from keyframes/images.
     /// Incremental: skips files that haven't changed since last index.
-    func deepIndexProject(_ project: Project, modelContext: ModelContext) async {
+    func deepIndexProject(_ project: Project, modelContext: ModelContext, useMotionScan: Bool = false) async {
         guard project.drive?.isConnected == true else { return }
         
         let projectURL = URL(fileURLWithPath: project.folderPath)
@@ -54,6 +66,7 @@ final class DeepMediaSearchService {
         await MainActor.run {
             indexingCurrentProject = project.displayName
             indexingStatus = "Enumerating files…"
+            shouldStopIndexing = false
         }
         
         // Check if Ollama is available for descriptions
@@ -106,9 +119,12 @@ final class DeepMediaSearchService {
             indexingFilesProcessed = 0
             indexingStatus = "Processing \(fileURLs.count) files…"
         }
+        projectStartDate = Date()
+        if indexingStartDate == nil { indexingStartDate = Date() }
         
         // Process each file
         for (index, item) in fileURLs.enumerated() {
+            guard !shouldStopIndexing else { break }
             let url = item.url
             let relativePath = item.relativePath
             
@@ -128,17 +144,29 @@ final class DeepMediaSearchService {
                         if existing.faceCount == 0 {
                             await detectFaces(url: url, into: existing)
                         }
-                        if let desc = await ollamaService.describeImageFile(at: url) {
-                            existing.visualDescription = desc.description
-                            await MainActor.run {
-                                indexingStatus = "✅ \(url.lastPathComponent): \(desc.description.prefix(60))…"
+                        // Context-aware description
+                        var ctx = buildContext(for: existing, in: project)
+                        ctx.visionTags = existing.visualTags.isEmpty ? nil : existing.visualTags
+                        ctx.detectedText = existing.detectedText.isEmpty ? nil : existing.detectedText
+                        ctx.faceCount = existing.faceCount > 0 ? existing.faceCount : nil
+                        if let imageData = loadResizedImageData(at: url) {
+                            if let desc = await ollamaService.describeWithContext(
+                                images: [imageData], context: ctx, filename: url.lastPathComponent
+                            ) {
+                                existing.visualDescription = desc.description
+                                await MainActor.run {
+                                    indexingStatus = "✅ \(url.lastPathComponent): \(desc.description.prefix(60))…"
+                                }
                             }
                         }
                     }
+                    // Persist enrichment to xattrs
+                    XattrMetadataService.writeMetadata(to: url, from: existing)
                     existingByPath.removeValue(forKey: relativePath)
                     await MainActor.run {
                         indexingFilesProcessed = index + 1
                         indexingProgress = Double(index + 1) / Double(fileURLs.count)
+                        updateETAEstimate(filesProcessed: index + 1, filesTotal: fileURLs.count)
                     }
                     continue
                 }
@@ -165,10 +193,27 @@ final class DeepMediaSearchService {
                 dateCreated: resourceValues.creationDate
             )
             
+            // Check for existing xattr metadata on the file (survives DB rebuilds)
+            if let xattr = XattrMetadataService.readMetadata(from: url) {
+                if let desc = xattr.visualDescription, !desc.isEmpty {
+                    mediaFile.visualDescription = desc
+                }
+                if let tags = xattr.visualTags, !tags.isEmpty {
+                    mediaFile.visualTags = tags
+                }
+                if let faces = xattr.faceCount, faces > 0 {
+                    mediaFile.faceCount = faces
+                }
+                if let text = xattr.detectedText, !text.isEmpty {
+                    mediaFile.detectedText = text
+                }
+            }
+            let hasXattrData = !mediaFile.visualDescription.isEmpty
+            
             // Extract type-specific metadata
             switch fileType {
             case .video:
-                await extractVideoMetadata(url: url, into: mediaFile)
+                await extractVideoMetadata(url: url, into: mediaFile, useMotionScan: hasXattrData ? false : useMotionScan)
             case .image:
                 extractImageMetadata(url: url, into: mediaFile)
             case .audio:
@@ -178,7 +223,7 @@ final class DeepMediaSearchService {
             }
             
             // Visual tagging for images (skip large projects to keep indexing fast)
-            if fileType == .image && fileURLs.count < 10_000 {
+            if fileType == .image && fileURLs.count < 10_000 && !hasXattrData {
                 await MainActor.run {
                     indexingStatus = "🏷️ Classifying: \(url.lastPathComponent)"
                 }
@@ -186,15 +231,23 @@ final class DeepMediaSearchService {
                 await recognizeText(url: url, into: mediaFile)
                 await detectFaces(url: url, into: mediaFile)
                 
-                // Ollama description (if available)
+                // Context-aware Ollama description
                 if ollamaReady {
                     await MainActor.run {
                         indexingStatus = "🤖 AI describing: \(url.lastPathComponent)"
                     }
-                    if let desc = await ollamaService.describeImageFile(at: url) {
-                        mediaFile.visualDescription = desc.description
-                        await MainActor.run {
-                            indexingStatus = "✅ \(url.lastPathComponent): \(desc.description.prefix(60))…"
+                    var ctx = buildContext(for: mediaFile, in: project)
+                    ctx.visionTags = mediaFile.visualTags.isEmpty ? nil : mediaFile.visualTags
+                    ctx.detectedText = mediaFile.detectedText.isEmpty ? nil : mediaFile.detectedText
+                    ctx.faceCount = mediaFile.faceCount > 0 ? mediaFile.faceCount : nil
+                    if let imageData = loadResizedImageData(at: url) {
+                        if let desc = await ollamaService.describeWithContext(
+                            images: [imageData], context: ctx, filename: url.lastPathComponent
+                        ) {
+                            mediaFile.visualDescription = desc.description
+                            await MainActor.run {
+                                indexingStatus = "✅ \(url.lastPathComponent): \(desc.description.prefix(60))…"
+                            }
                         }
                     }
                 }
@@ -203,9 +256,15 @@ final class DeepMediaSearchService {
             mediaFile.project = project
             modelContext.insert(mediaFile)
             
+            // Persist AI metadata to file xattrs
+            if !mediaFile.visualDescription.isEmpty || !mediaFile.visualTags.isEmpty {
+                XattrMetadataService.writeMetadata(to: url, from: mediaFile)
+            }
+            
             await MainActor.run {
                 indexingFilesProcessed = index + 1
                 indexingProgress = Double(index + 1) / Double(fileURLs.count)
+                updateETAEstimate(filesProcessed: index + 1, filesTotal: fileURLs.count)
             }
             
             // Yield periodically for UI responsiveness
@@ -225,21 +284,25 @@ final class DeepMediaSearchService {
     }
     
     /// Deep-index multiple projects with progress tracking.
-    func deepIndexProjects(_ projects: [Project], modelContext: ModelContext) async {
+    func deepIndexProjects(_ projects: [Project], modelContext: ModelContext, useMotionScan: Bool = false) async {
         let toIndex = projects.filter { $0.drive?.isConnected == true }
         guard !toIndex.isEmpty else { return }
         
         await MainActor.run {
             isIndexing = true
             indexingProgress = 0
+            indexingEstimatedTimeRemaining = "Calculating…"
+            indexingElapsedTime = ""
         }
+        indexingStartDate = Date()
         
         for (idx, project) in toIndex.enumerated() {
+            guard !shouldStopIndexing else { break }
             await MainActor.run {
                 indexingStatus = "Indexing \(idx + 1)/\(toIndex.count): \(project.displayName)"
             }
             
-            await deepIndexProject(project, modelContext: modelContext)
+            await deepIndexProject(project, modelContext: modelContext, useMotionScan: useMotionScan)
             
             await MainActor.run {
                 indexingProgress = Double(idx + 1) / Double(toIndex.count)
@@ -251,7 +314,198 @@ final class DeepMediaSearchService {
             indexingProgress = 1.0
             indexingStatus = ""
             indexingCurrentProject = ""
+            indexingEstimatedTimeRemaining = ""
+            if let start = indexingStartDate {
+                indexingElapsedTime = formatDuration(Date().timeIntervalSince(start))
+            }
         }
+        indexingStartDate = nil
+        projectStartDate = nil
+    }
+    
+    /// Deep-index only a specific subfolder within a project.
+    /// Scans files under `folderRelativePath` and applies the same AI pipeline.
+    func deepIndexFolder(_ project: Project, folderRelativePath: String, modelContext: ModelContext, useMotionScan: Bool = false) async {
+        guard project.drive?.isConnected == true else { return }
+        
+        let projectURL = URL(fileURLWithPath: project.folderPath)
+        let folderURL = folderRelativePath.isEmpty
+            ? projectURL
+            : projectURL.appendingPathComponent(folderRelativePath)
+        guard FileManager.default.fileExists(atPath: folderURL.path) else { return }
+        
+        await MainActor.run {
+            isIndexing = true
+            indexingProgress = 0
+            indexingCurrentProject = project.displayName
+            indexingStatus = "Scanning folder: \(folderRelativePath.isEmpty ? "/" : folderRelativePath)"
+            indexingEstimatedTimeRemaining = "Calculating…"
+            indexingElapsedTime = ""
+            shouldStopIndexing = false
+        }
+        indexingStartDate = Date()
+        projectStartDate = Date()
+        
+        // Check Ollama availability
+        let savedModel = UserDefaults.standard.string(forKey: "ollamaModel") ?? "qwen3.5:0.8b"
+        ollamaService.currentModel = savedModel
+        await ollamaService.checkAvailability()
+        ollamaService.resetProgress()
+        let ollamaReady = ollamaService.isAvailable
+        
+        // Build lookup of existing files
+        var existingByPath: [String: MediaFile] = [:]
+        for file in project.mediaFiles {
+            existingByPath[file.relativePath] = file
+        }
+        
+        // Enumerate files in the target folder only
+        var fileURLs: [(url: URL, relativePath: String)] = []
+        if let enumerator = FileManager.default.enumerator(
+            at: folderURL,
+            includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey, .contentModificationDateKey, .creationDateKey],
+            options: [.skipsHiddenFiles],
+            errorHandler: nil
+        ) {
+            for case let fileURL as URL in enumerator {
+                guard let values = try? fileURL.resourceValues(forKeys: [.isDirectoryKey]) else { continue }
+                if values.isDirectory == true {
+                    if shouldSkipDirectory(fileURL.lastPathComponent) {
+                        enumerator.skipDescendants()
+                    }
+                    continue
+                }
+                let relativePath = fileURL.path.replacingOccurrences(of: projectURL.path + "/", with: "")
+                fileURLs.append((url: fileURL, relativePath: relativePath))
+                if fileURLs.count >= maxFilesPerProject { break }
+            }
+        }
+        
+        await MainActor.run {
+            indexingFilesTotal = fileURLs.count
+            indexingFilesProcessed = 0
+            indexingStatus = "Processing \(fileURLs.count) files in folder…"
+        }
+        
+        for (index, item) in fileURLs.enumerated() {
+            guard !shouldStopIndexing else { break }
+            let url = item.url
+            let relativePath = item.relativePath
+            
+            // Skip unchanged files
+            if let existing = existingByPath[relativePath] {
+                let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+                if let existingMod = existing.dateModified, let fileMod = modified, existingMod >= fileMod {
+                    // Enrich if missing AI data
+                    if ollamaReady && existing.visualDescription.isEmpty && existing.fileType == .image {
+                        await MainActor.run { indexingStatus = "🤖 Enriching: \(url.lastPathComponent)" }
+                        if existing.detectedText.isEmpty { await recognizeText(url: url, into: existing) }
+                        if existing.faceCount == 0 { await detectFaces(url: url, into: existing) }
+                        var ctx = buildContext(for: existing, in: project)
+                        ctx.visionTags = existing.visualTags.isEmpty ? nil : existing.visualTags
+                        if let imageData = loadResizedImageData(at: url) {
+                            if let desc = await ollamaService.describeWithContext(images: [imageData], context: ctx, filename: url.lastPathComponent) {
+                                existing.visualDescription = desc.description
+                            }
+                        }
+                        XattrMetadataService.writeMetadata(to: url, from: existing)
+                    }
+                    await MainActor.run {
+                        indexingFilesProcessed = index + 1
+                        indexingProgress = Double(index + 1) / Double(fileURLs.count)
+                        updateETAEstimate(filesProcessed: index + 1, filesTotal: fileURLs.count)
+                    }
+                    continue
+                }
+                modelContext.delete(existing)
+            }
+            
+            // Create new MediaFile
+            guard let resourceValues = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey, .creationDateKey]) else { continue }
+            let ext = url.pathExtension.lowercased()
+            let fileType = MediaFileType.classify(ext)
+            let mediaFile = MediaFile(
+                filename: url.lastPathComponent,
+                relativePath: relativePath,
+                fileExtension: ext,
+                fileSize: Int64(resourceValues.fileSize ?? 0),
+                fileType: fileType,
+                dateModified: resourceValues.contentModificationDate,
+                dateCreated: resourceValues.creationDate
+            )
+            
+            // Check xattr for existing AI data
+            if let xattr = XattrMetadataService.readMetadata(from: url) {
+                if let desc = xattr.visualDescription, !desc.isEmpty { mediaFile.visualDescription = desc }
+                if let tags = xattr.visualTags, !tags.isEmpty { mediaFile.visualTags = tags }
+                if let faces = xattr.faceCount, faces > 0 { mediaFile.faceCount = faces }
+                if let text = xattr.detectedText, !text.isEmpty { mediaFile.detectedText = text }
+            }
+            let hasXattrData = !mediaFile.visualDescription.isEmpty
+            
+            // Extract metadata
+            switch fileType {
+            case .video:
+                await extractVideoMetadata(url: url, into: mediaFile, useMotionScan: hasXattrData ? false : useMotionScan)
+            case .image:
+                extractImageMetadata(url: url, into: mediaFile)
+            case .audio:
+                await extractAudioMetadata(url: url, into: mediaFile)
+            case .projectFile, .other:
+                break
+            }
+            
+            // Image AI tagging
+            if fileType == .image && !hasXattrData {
+                await MainActor.run { indexingStatus = "🏷️ Classifying: \(url.lastPathComponent)" }
+                await classifyFile(url: url, into: mediaFile)
+                await recognizeText(url: url, into: mediaFile)
+                await detectFaces(url: url, into: mediaFile)
+                
+                if ollamaReady {
+                    await MainActor.run { indexingStatus = "🤖 AI describing: \(url.lastPathComponent)" }
+                    var ctx = buildContext(for: mediaFile, in: project)
+                    ctx.visionTags = mediaFile.visualTags.isEmpty ? nil : mediaFile.visualTags
+                    ctx.detectedText = mediaFile.detectedText.isEmpty ? nil : mediaFile.detectedText
+                    ctx.faceCount = mediaFile.faceCount > 0 ? mediaFile.faceCount : nil
+                    if let imageData = loadResizedImageData(at: url) {
+                        if let desc = await ollamaService.describeWithContext(images: [imageData], context: ctx, filename: url.lastPathComponent) {
+                            mediaFile.visualDescription = desc.description
+                        }
+                    }
+                }
+            }
+            
+            mediaFile.project = project
+            modelContext.insert(mediaFile)
+            
+            if !mediaFile.visualDescription.isEmpty || !mediaFile.visualTags.isEmpty {
+                XattrMetadataService.writeMetadata(to: url, from: mediaFile)
+            }
+            
+            await MainActor.run {
+                indexingFilesProcessed = index + 1
+                indexingProgress = Double(index + 1) / Double(fileURLs.count)
+                updateETAEstimate(filesProcessed: index + 1, filesTotal: fileURLs.count)
+            }
+            
+            if index % 50 == 0 {
+                try? await Task.sleep(nanoseconds: 5_000_000)
+            }
+        }
+        
+        await MainActor.run {
+            isIndexing = false
+            indexingProgress = 1.0
+            indexingStatus = ""
+            indexingCurrentProject = ""
+            indexingEstimatedTimeRemaining = ""
+            if let start = indexingStartDate {
+                indexingElapsedTime = formatDuration(Date().timeIntervalSince(start))
+            }
+        }
+        indexingStartDate = nil
+        projectStartDate = nil
     }
     
     // MARK: - Search
@@ -326,7 +580,7 @@ final class DeepMediaSearchService {
     
     // MARK: - Video Metadata Extraction
     
-    private func extractVideoMetadata(url: URL, into file: MediaFile) async {
+    private func extractVideoMetadata(url: URL, into file: MediaFile, useMotionScan: Bool = false) async {
         let asset = AVAsset(url: url)
         
         // Duration
@@ -370,33 +624,33 @@ final class DeepMediaSearchService {
         }
         
         // Keyframe extraction + visual classification
-        await extractAndClassifyKeyframes(url: url, asset: asset, into: file)
+        await extractAndClassifyKeyframes(url: url, asset: asset, into: file, useMotionScan: useMotionScan)
     }
     
-    /// Extract keyframes and classify them with Apple Vision.
-    private func extractAndClassifyKeyframes(url: URL, asset: AVAsset, into file: MediaFile) async {
+    /// Extract keyframes, classify with Apple Vision, and describe with context-aware Qwen.
+    private func extractAndClassifyKeyframes(url: URL, asset: AVAsset, into file: MediaFile, useMotionScan: Bool = false) async {
         guard let duration = try? await asset.load(.duration) else { return }
         let totalSeconds = CMTimeGetSeconds(duration)
         guard totalSeconds > 0 else { return }
         
-        // Calculate keyframe times
-        var times: [CMTime] = []
+        // Calculate keyframe times for Vision classification (up to 5 at 30s intervals)
+        var classificationTimes: [CMTime] = []
         var t: Double = 0
-        while t < totalSeconds && times.count < maxKeyframesPerVideo {
-            times.append(CMTime(seconds: t, preferredTimescale: 600))
+        while t < totalSeconds && classificationTimes.count < maxKeyframesPerVideo {
+            classificationTimes.append(CMTime(seconds: t, preferredTimescale: 600))
             t += keyframeIntervalSeconds
         }
-        if times.isEmpty { return }
+        if classificationTimes.isEmpty { return }
         
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: 640, height: 640) // Keep it fast
+        generator.maximumSize = CGSize(width: 640, height: 640)
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = CMTime(seconds: 2, preferredTimescale: 600)
         
         var allTags: Set<String> = []
         
-        for time in times {
+        for time in classificationTimes {
             do {
                 let (cgImage, _) = try await generator.image(at: time)
                 let tags = try await classifyImage(cgImage)
@@ -412,20 +666,95 @@ final class DeepMediaSearchService {
             file.visualTags = Array(allTags).sorted()
         }
         
-        // Ollama description from first keyframe (if available)
-        if ollamaService.isAvailable && !times.isEmpty {
+        // Smart Ollama description with context
+        guard ollamaService.isAvailable else { return }
+        
+        // Select 2 keyframe times: 1s in and 1s before end
+        let tStart = min(1.0, totalSeconds * 0.1)
+        let tEnd = max(totalSeconds - 1.0, totalSeconds * 0.9)
+        let descriptionTimes: [CMTime] = [
+            CMTime(seconds: tStart, preferredTimescale: 600),
+            CMTime(seconds: tEnd, preferredTimescale: 600),
+        ]
+        
+        // Extract keyframes as CGImages
+        var frameCGImages: [CGImage] = []
+        var frameDataList: [Data] = []
+        for time in descriptionTimes {
             do {
-                let (cgImage, _) = try await generator.image(at: times[0])
-                await MainActor.run {
-                    indexingStatus = "🤖 AI describing video: \(file.filename)"
+                let (cgImage, _) = try await generator.image(at: time)
+                frameCGImages.append(cgImage)
+                if let jpegData = ollamaService.cgImageToJPEG(cgImage) {
+                    frameDataList.append(jpegData)
                 }
-                if let desc = await ollamaService.describeImage(cgImage, filename: file.filename) {
+            } catch {
+                continue
+            }
+        }
+        
+        guard !frameDataList.isEmpty else { return }
+        
+        // Build context
+        var ctx = buildContext(for: file, in: file.project)
+        ctx.visionTags = file.visualTags.isEmpty ? nil : file.visualTags
+        
+        if useMotionScan {
+            // ENHANCED MOTION MODE: Export a short video clip and send it to Qwen
+            await MainActor.run {
+                indexingStatus = "🎬 Exporting preview clip: \(file.filename)"
+            }
+            
+            if let videoData = await exportPreviewClip(asset: asset, totalSeconds: totalSeconds) {
+                await MainActor.run {
+                    indexingStatus = "🤖 AI analyzing video clip (\(ByteCountFormatter.string(fromByteCount: Int64(videoData.count), countStyle: .file))): \(file.filename)"
+                }
+                
+                // Send video clip + keyframes together
+                var allData = [videoData] + frameDataList
+                // Cap at 4 items for Ollama
+                allData = Array(allData.prefix(4))
+                ctx.motionHint = "a short video clip is provided as the first input for real motion analysis"
+                
+                if let desc = await ollamaService.describeWithContext(
+                    images: allData, context: ctx, filename: file.filename
+                ) {
                     file.visualDescription = desc.description
                     await MainActor.run {
                         indexingStatus = "✅ \(file.filename): \(desc.description.prefix(60))…"
                     }
+                    return
                 }
-            } catch {}
+                // Fall through to frames-only if video description failed
+            }
+            // Fall through to frames-only if export failed
+        }
+        
+        // FRAMES-ONLY MODE (or fallback from enhanced mode)
+        await MainActor.run {
+            indexingStatus = "🤖 AI describing video (\(frameDataList.count) frames): \(file.filename)"
+        }
+        
+        // Compute frame difference to detect camera motion
+        if frameCGImages.count == 2 {
+            let diff = computeFrameDifference(frameCGImages[0], frameCGImages[1])
+            if diff > 0.35 {
+                ctx.motionHint = "strong camera movement or scene change detected (frames differ significantly)"
+            } else if diff > 0.15 {
+                ctx.motionHint = "moderate camera movement detected (frames differ noticeably)"
+            } else if diff > 0.05 {
+                ctx.motionHint = "slight camera movement detected (subtle change between frames)"
+            } else {
+                ctx.motionHint = "camera appears mostly static (frames are very similar)"
+            }
+        }
+        
+        if let desc = await ollamaService.describeWithContext(
+            images: frameDataList, context: ctx, filename: file.filename
+        ) {
+            file.visualDescription = desc.description
+            await MainActor.run {
+                indexingStatus = "✅ \(file.filename): \(desc.description.prefix(60))…"
+            }
         }
     }
     
@@ -621,9 +950,225 @@ final class DeepMediaSearchService {
     
     // MARK: - Helpers
     
+    /// Build a DescriptionContext from a MediaFile and its Project.
+    private func buildContext(for file: MediaFile, in project: Project?) -> DescriptionContext {
+        var ctx = DescriptionContext()
+        
+        // Project-level context
+        if let project = project {
+            ctx.projectName = project.displayName
+            ctx.projectType = project.projectType
+            ctx.clientName = project.client?.name
+            ctx.detectedNLEs = project.detectedNLEs.isEmpty ? nil : project.detectedNLEs
+            ctx.cameraSources = project.cameraSources.isEmpty ? nil : project.cameraSources
+        }
+        
+        // File-level context
+        ctx.folderPath = file.relativePath
+        ctx.fileType = file.fileType
+        ctx.duration = file.duration
+        ctx.resolution = file.resolution
+        ctx.codec = file.codec
+        ctx.frameRate = file.frameRate
+        ctx.colorSpace = file.colorSpace
+        ctx.cameraModel = file.cameraModel
+        ctx.iso = file.iso
+        ctx.shutterSpeed = file.shutterSpeed
+        ctx.lens = file.lens
+        
+        return ctx
+    }
+    
+    /// Load an image file, resize to 512px max, and return as JPEG data.
+    private func loadResizedImageData(at url: URL) -> Data? {
+        guard let data = try? Data(contentsOf: url),
+              let nsImage = NSImage(data: data) else { return nil }
+        let size = nsImage.size
+        let maxDim: CGFloat = 512
+        let scale = min(maxDim / size.width, maxDim / size.height, 1.0)
+        let newSize = NSSize(width: size.width * scale, height: size.height * scale)
+        
+        let resized = NSImage(size: newSize)
+        resized.lockFocus()
+        nsImage.draw(in: NSRect(origin: .zero, size: newSize))
+        resized.unlockFocus()
+        
+        guard let tiffData = resized.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.7]) else {
+            return nil
+        }
+        return jpegData
+    }
+    
     private func shouldSkipDirectory(_ name: String) -> Bool {
         if name.hasPrefix(".") { return true }
         return skipDirectories.contains(name)
+    }
+    
+    // MARK: - Video Preview Export (Enhanced Motion Mode)
+    
+    /// Export a short, downscaled video clip for Qwen analysis.
+    /// Returns the video as Data (MP4/H.264), or nil if export fails.
+    private func exportPreviewClip(asset: AVAsset, totalSeconds: Double) async -> Data? {
+        // Select a ~5 second window from the middle of the clip
+        let clipDuration: Double = min(5.0, totalSeconds)
+        let startTime = max(0, (totalSeconds - clipDuration) / 2.0)
+        let timeRange = CMTimeRange(
+            start: CMTime(seconds: startTime, preferredTimescale: 600),
+            duration: CMTime(seconds: clipDuration, preferredTimescale: 600)
+        )
+        
+        // Create temp output URL
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("mp4")
+        
+        defer {
+            try? FileManager.default.removeItem(at: tempURL)
+        }
+        
+        // Use AVAssetExportSession for a quick low-quality export
+        guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetLowQuality) else {
+            return nil
+        }
+        
+        exportSession.outputURL = tempURL
+        exportSession.outputFileType = .mp4
+        exportSession.timeRange = timeRange
+        exportSession.shouldOptimizeForNetworkUse = true
+        
+        // Apply a scale-down video composition (320px wide)
+        if let tracks = try? await asset.loadTracks(withMediaType: .video),
+           let track = tracks.first,
+           let naturalSize = try? await track.load(.naturalSize) {
+            let targetWidth: CGFloat = 320
+            let scale = targetWidth / naturalSize.width
+            if scale < 1.0 {
+                let renderSize = CGSize(
+                    width: targetWidth,
+                    height: ceil(naturalSize.height * scale / 2) * 2 // Ensure even height
+                )
+                let composition = AVMutableVideoComposition()
+                composition.renderSize = renderSize
+                composition.frameDuration = CMTime(value: 1, timescale: 15) // 15fps for small file
+                
+                let instruction = AVMutableVideoCompositionInstruction()
+                instruction.timeRange = timeRange
+                
+                let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: track)
+                layerInstruction.setTransform(
+                    CGAffineTransform(scaleX: scale, y: scale),
+                    at: .zero
+                )
+                instruction.layerInstructions = [layerInstruction]
+                composition.instructions = [instruction]
+                
+                exportSession.videoComposition = composition
+            }
+        }
+        
+        // Export
+        await exportSession.export()
+        
+        guard exportSession.status == .completed else {
+            return nil
+        }
+        
+        // Read the exported clip data
+        guard let videoData = try? Data(contentsOf: tempURL) else {
+            return nil
+        }
+        
+        // Cap at 5MB to avoid overwhelming the model
+        guard videoData.count < 5_000_000 else {
+            return nil
+        }
+        
+        return videoData
+    }
+    
+    // MARK: - ETA Estimation
+    
+    /// Update the estimated time remaining based on processing rate.
+    @MainActor
+    private func updateETAEstimate(filesProcessed: Int, filesTotal: Int) {
+        guard let start = projectStartDate, filesProcessed > 0 else { return }
+        
+        let elapsed = Date().timeIntervalSince(start)
+        let rate = Double(filesProcessed) / elapsed  // files per second
+        let remaining = Double(filesTotal - filesProcessed)
+        
+        guard rate > 0 else { return }
+        let etaSeconds = remaining / rate
+        
+        indexingEstimatedTimeRemaining = formatDuration(etaSeconds)
+        
+        // Also update elapsed time for the overall session
+        if let overallStart = indexingStartDate {
+            indexingElapsedTime = formatDuration(Date().timeIntervalSince(overallStart))
+        }
+    }
+    
+    /// Format a time interval into a human-readable string.
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let totalSeconds = Int(seconds)
+        if totalSeconds < 5 { return "< 5s" }
+        if totalSeconds < 60 { return "\(totalSeconds)s" }
+        let minutes = totalSeconds / 60
+        let secs = totalSeconds % 60
+        if minutes < 60 {
+            return secs > 0 ? "\(minutes)m \(secs)s" : "\(minutes)m"
+        }
+        let hours = minutes / 60
+        let mins = minutes % 60
+        return mins > 0 ? "\(hours)h \(mins)m" : "\(hours)h"
+    }
+    
+    /// Compute normalized pixel difference between two frames (0.0 = identical, 1.0 = completely different).
+    /// Downscales to 64×64 for speed, compares average RGB channel differences.
+    private func computeFrameDifference(_ frame1: CGImage, _ frame2: CGImage) -> Double {
+        let size = 64
+        let bytesPerPixel = 4
+        let bytesPerRow = size * bytesPerPixel
+        let totalBytes = bytesPerRow * size
+        
+        // Create small bitmaps for both frames
+        guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else { return 0 }
+        
+        var pixels1 = [UInt8](repeating: 0, count: totalBytes)
+        var pixels2 = [UInt8](repeating: 0, count: totalBytes)
+        
+        guard let ctx1 = CGContext(
+            data: &pixels1, width: size, height: size,
+            bitsPerComponent: 8, bytesPerRow: bytesPerRow,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return 0 }
+        
+        guard let ctx2 = CGContext(
+            data: &pixels2, width: size, height: size,
+            bitsPerComponent: 8, bytesPerRow: bytesPerRow,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return 0 }
+        
+        let rect = CGRect(x: 0, y: 0, width: size, height: size)
+        ctx1.draw(frame1, in: rect)
+        ctx2.draw(frame2, in: rect)
+        
+        // Compute average absolute difference across RGB channels
+        var totalDiff: Double = 0
+        let pixelCount = size * size
+        for i in 0..<pixelCount {
+            let offset = i * bytesPerPixel
+            let r = abs(Int(pixels1[offset]) - Int(pixels2[offset]))
+            let g = abs(Int(pixels1[offset + 1]) - Int(pixels2[offset + 1]))
+            let b = abs(Int(pixels1[offset + 2]) - Int(pixels2[offset + 2]))
+            totalDiff += Double(r + g + b) / (3.0 * 255.0)
+        }
+        
+        return totalDiff / Double(pixelCount)
     }
     
     private func codecName(from fourCC: FourCharCode) -> String {

@@ -46,6 +46,7 @@ struct ContentView: View {
     @AppStorage("autoScanOnMount") private var autoScanOnMount = true
     @AppStorage("scanDepth") private var scanDepth = 1
     @AppStorage("enableVisualIndexing") private var enableVisualIndexing = true
+    @AppStorage("deepScanMode") private var deepScanMode = "frames"
     
     @State private var geminiService = GeminiService()
     @State private var visualSearchService = VisualSearchService()
@@ -171,7 +172,8 @@ struct ContentView: View {
                     project: explorerProj,
                     isPresented: $explorerProject,
                     initialFilePath: explorerInitialFile,
-                    searchText: $searchText
+                    searchText: $searchText,
+                    deepMediaService: deepMediaService
                 )
                 .transition(.opacity)
                 .onAppear { explorerInitialFile = nil }
@@ -338,8 +340,23 @@ struct ContentView: View {
 
                 
                 // Deep Index button
-                Button {
-                    Task { await runDeepIndexing() }
+                Menu {
+                    Button {
+                        Task {
+                            deepScanMode = "frames"
+                            await runDeepIndexing()
+                        }
+                    } label: {
+                        Label("Frames Only (Fast)", systemImage: "photo.on.rectangle")
+                    }
+                    Button {
+                        Task {
+                            deepScanMode = "motion"
+                            await runDeepIndexing()
+                        }
+                    } label: {
+                        Label("Enhanced Motion (Video)", systemImage: "video.fill")
+                    }
                 } label: {
                     Label("Deep Index", systemImage: deepMediaService.isIndexing ? "arrow.triangle.2.circlepath" : "square.stack.3d.up")
                 }
@@ -636,18 +653,52 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Deep Indexing")
                         .font(.system(size: 12, weight: .semibold))
-                    Text("\(deepMediaService.indexingFilesProcessed) / \(deepMediaService.indexingFilesTotal) files")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+                    HStack(spacing: 4) {
+                        Text("\(deepMediaService.indexingFilesProcessed) / \(deepMediaService.indexingFilesTotal) files")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                        if !deepMediaService.indexingElapsedTime.isEmpty {
+                            Text("· \(deepMediaService.indexingElapsedTime)")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                                .monospacedDigit()
+                        }
+                    }
                 }
                 
                 Spacer()
                 
-                Text("\(Int(deepMediaService.indexingProgress * 100))%")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(.cyan)
-                    .monospacedDigit()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(Int(deepMediaService.indexingProgress * 100))%")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(.cyan)
+                        .monospacedDigit()
+                    if !deepMediaService.indexingEstimatedTimeRemaining.isEmpty {
+                        HStack(spacing: 2) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 7))
+                                .foregroundStyle(.cyan.opacity(0.6))
+                            Text("~\(deepMediaService.indexingEstimatedTimeRemaining)")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(.cyan.opacity(0.7))
+                                .monospacedDigit()
+                        }
+                    }
+                }
+                
+                Button {
+                    deepMediaService.stopIndexing()
+                } label: {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .frame(width: 24, height: 24)
+                        .background(.red.opacity(0.25))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help("Stop indexing")
             }
             
             // Current project
@@ -734,7 +785,7 @@ struct ContentView: View {
     private func runDeepIndexing() async {
         let connectedProjects = projects.filter { $0.drive?.isConnected == true }
         guard !connectedProjects.isEmpty else { return }
-        await deepMediaService.deepIndexProjects(Array(connectedProjects), modelContext: modelContext)
+        await deepMediaService.deepIndexProjects(Array(connectedProjects), modelContext: modelContext, useMotionScan: deepScanMode == "motion")
     }
     
     /// Runs AI categorization and duplicate detection.

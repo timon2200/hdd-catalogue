@@ -64,7 +64,111 @@ final class OllamaService {
         }
     }
     
-    // MARK: - Image Description (Chat API — works with all models)
+    // MARK: - Context-Aware Description (Enhanced)
+    
+    /// Generate a rich description using multiple images and contextual metadata.
+    /// Sends up to 4 images in a single chat request with a context-aware prompt.
+    /// Falls back to the basic method if context is nil.
+    func describeWithContext(
+        images: [Data],
+        context: DescriptionContext,
+        filename: String? = nil
+    ) async -> ImageDescription? {
+        guard isAvailable, !images.isEmpty else { return nil }
+        
+        // Update progress
+        if let name = filename {
+            await MainActor.run { currentFile = name }
+        }
+        
+        // Cap at 4 images (Ollama/Qwen limit)
+        let imagesToSend = Array(images.prefix(4))
+        let base64Images = imagesToSend.map { $0.base64EncodedString() }
+        let prompt = context.buildPrompt(imageCount: imagesToSend.count)
+        
+        let payload: [String: Any] = [
+            "model": currentModel,
+            "messages": [
+                [
+                    "role": "user",
+                    "content": prompt,
+                    "images": base64Images
+                ]
+            ],
+            "stream": false,
+            "think": false,
+            "options": [
+                "temperature": 0.3,
+                "num_predict": 150  // Terse 1-2 sentence descriptions
+            ]
+        ]
+        
+        do {
+            let url = URL(string: "\(baseURL)/api/chat")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+            request.timeoutInterval = timeoutSeconds
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                await MainActor.run { descriptionsFailed += 1 }
+                return nil
+            }
+            
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let message = json["message"] as? [String: Any] else {
+                await MainActor.run { descriptionsFailed += 1 }
+                return nil
+            }
+            
+            // Qwen 3.5 may put content in "thinking" if think mode leaks
+            let responseText = (message["content"] as? String).flatMap({ $0.isEmpty ? nil : $0 })
+                    ?? (message["thinking"] as? String)
+                    ?? ""
+            
+            let description = responseText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !description.isEmpty else {
+                await MainActor.run { descriptionsFailed += 1 }
+                return nil
+            }
+            
+            await MainActor.run {
+                currentDescription = description
+                descriptionsGenerated += 1
+            }
+            
+            return ImageDescription(description: description, model: currentModel)
+        } catch {
+            await MainActor.run { descriptionsFailed += 1 }
+            return nil
+        }
+    }
+    
+    /// Convert a CGImage to compressed JPEG Data, resized to maxDim for speed.
+    func cgImageToJPEG(_ cgImage: CGImage, maxDim: CGFloat = 512) -> Data? {
+        let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        let scale = min(maxDim / CGFloat(cgImage.width), maxDim / CGFloat(cgImage.height), 1.0)
+        let newSize = NSSize(
+            width: CGFloat(cgImage.width) * scale,
+            height: CGFloat(cgImage.height) * scale
+        )
+        let resized = NSImage(size: newSize)
+        resized.lockFocus()
+        nsImage.draw(in: NSRect(origin: .zero, size: newSize))
+        resized.unlockFocus()
+        guard let tiffData = resized.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.7]) else {
+            return nil
+        }
+        return jpegData
+    }
+    
+    // MARK: - Basic Image Description (Legacy — no context)
     
     /// Generate a description for an image using the local Ollama model.
     /// Uses /api/chat with images in message content (compatible with Qwen 3.5, LLaVA, etc.)
@@ -219,4 +323,86 @@ struct OllamaModel: Identifiable {
 struct ImageDescription {
     let description: String
     let model: String
+}
+
+// MARK: - Description Context
+
+/// Bundles all available metadata to build a context-aware prompt for Qwen.
+struct DescriptionContext {
+    // Project-level context
+    var projectName: String?
+    var projectType: String?       // "Video Edit", "Photography", etc.
+    var clientName: String?
+    var detectedNLEs: [String]?
+    var cameraSources: [String]?
+    
+    // File-level context
+    var folderPath: String?        // Relative path within project
+    var fileType: MediaFileType = .other
+    var duration: Double?          // Seconds (for videos)
+    var resolution: String?
+    var codec: String?
+    var frameRate: Double?
+    var colorSpace: String?
+    var cameraModel: String?       // From EXIF
+    var iso: Int?
+    var shutterSpeed: String?
+    var lens: String?
+    
+    // Pre-computed tags (from Apple Vision)
+    var visionTags: [String]?
+    var detectedText: String?
+    var faceCount: Int?
+    
+    // Motion analysis (computed from frame comparison)
+    var motionHint: String?  // e.g. "significant camera movement detected" or "camera appears static"
+    
+    /// Build a context-aware prompt for the given number of images.
+    func buildPrompt(imageCount: Int) -> String {
+        var parts: [String] = []
+        
+        // Compact context line
+        var ctx: [String] = []
+        if let name = projectName { ctx.append(name) }
+        if let type = projectType, type != "Unknown" { ctx.append(type) }
+        if let client = clientName { ctx.append("for \(client)") }
+        if !ctx.isEmpty { parts.append("Project: \(ctx.joined(separator: " — "))") }
+        
+        // Compact metadata line
+        var meta: [String] = []
+        if let path = folderPath { meta.append(path) }
+        if let dur = duration {
+            let mins = Int(dur) / 60; let secs = Int(dur) % 60
+            meta.append(dur >= 3600 ? String(format: "%d:%02d:%02d", Int(dur)/3600, mins%60, secs) : String(format: "%d:%02d", mins, secs))
+        }
+        if let res = resolution { meta.append(res) }
+        if let c = codec { meta.append(c) }
+        if let fps = frameRate { meta.append("\(String(format: "%.2g", fps))fps") }
+        if let cs = colorSpace { meta.append(cs) }
+        if let cam = cameraModel { meta.append(cam) }
+        if !meta.isEmpty { parts.append(meta.joined(separator: " · ")) }
+        
+        // Vision tags
+        if let tags = visionTags, !tags.isEmpty {
+            parts.append("Tags: \(tags.joined(separator: ", "))")
+        }
+        if let faces = faceCount, faces > 0 { parts.append("\(faces) face\(faces == 1 ? "" : "s")") }
+        
+        // Task instruction — terse, no fluff
+        if fileType == .video {
+            if imageCount > 1 {
+                parts.append("Image 1 = first second of clip. Image 2 = last second of clip.")
+            }
+            if let hint = motionHint {
+                parts.append("Motion analysis: \(hint).")
+            }
+            parts.append("Describe this clip: the action happening, camera movement, setting, mood. Write 1-3 plain sentences for search. No headers, no bullets, no preamble.")
+        } else if fileType == .image {
+            parts.append("Describe this image: subject, setting, lighting, mood. Write 1-3 plain sentences for search. No headers, no bullets, no preamble.")
+        } else {
+            parts.append("Describe what you see in 1-3 plain sentences. No headers, no bullets, no preamble.")
+        }
+        
+        return parts.joined(separator: "\n")
+    }
 }

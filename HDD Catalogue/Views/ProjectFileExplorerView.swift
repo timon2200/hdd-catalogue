@@ -145,6 +145,9 @@ struct ProjectFileExplorerView: View {
     @Binding var isPresented: Project?
     var initialFilePath: String? = nil  // Relative path to navigate to on open
     @Binding var searchText: String
+    @Bindable var deepMediaService: DeepMediaSearchService
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage("deepScanMode") private var deepScanMode = "frames"
     
     @State private var currentPath: String = ""          // Relative path from project root
     @State private var selectedItem: FileSystemItem?
@@ -201,66 +204,99 @@ struct ProjectFileExplorerView: View {
     
     /// Recursively find all files matching searchText under the current path
     private var recursiveSearchResults: [FileSystemItem] {
-        guard !searchText.isEmpty, isConnected else { return [] }
-        // Always search from project root for unified search
-        let rootURL = URL(fileURLWithPath: projectRoot)
-        let lookup = mediaFileLookup
+        guard !searchText.isEmpty else { return [] }
+        let query = searchText.lowercased()
         
-        guard let enumerator = FileManager.default.enumerator(
-            at: rootURL,
-            includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey],
-            options: [.skipsHiddenFiles]
-        ) else { return [] }
-        
-        var results: [FileSystemItem] = []
-        
-        for case let itemURL as URL in enumerator {
-            let resourceValues = try? itemURL.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
-            let isDir = resourceValues?.isDirectory ?? false
-            if isDir { continue } // Only show files in search results
+        if isConnected {
+            // Online: enumerate filesystem
+            let rootURL = URL(fileURLWithPath: projectRoot)
+            let lookup = mediaFileLookup
             
-            let name = itemURL.lastPathComponent
+            guard let enumerator = FileManager.default.enumerator(
+                at: rootURL,
+                includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey],
+                options: [.skipsHiddenFiles]
+            ) else { return [] }
             
-            // Build relative path from project root
-            let fullPath = itemURL.path
-            let relPath = fullPath.hasPrefix(projectRoot + "/")
-                ? String(fullPath.dropFirst(projectRoot.count + 1))
-                : itemURL.lastPathComponent
+            var results: [FileSystemItem] = []
             
-            // Check filename + MediaFile metadata for match
-            let mf = lookup[relPath]
-            let query = searchText.lowercased()
-            let matchesName = name.localizedCaseInsensitiveContains(searchText)
-            let matchesMedia = mf.map { file in
-                (file.codec ?? "").lowercased().contains(query) ||
-                (file.cameraModel ?? "").lowercased().contains(query) ||
-                (file.colorSpace ?? "").lowercased().contains(query) ||
-                (file.resolution ?? "").lowercased().contains(query) ||
-                file.metadataBadge.lowercased().contains(query) ||
-                file.visualTags.contains(where: { $0.lowercased().contains(query) }) ||
-                file.visualDescription.lowercased().contains(query) ||
-                file.fileExtension.lowercased().contains(query)
-            } ?? false
+            for case let itemURL as URL in enumerator {
+                let resourceValues = try? itemURL.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
+                let isDir = resourceValues?.isDirectory ?? false
+                if isDir { continue }
+                
+                let name = itemURL.lastPathComponent
+                let fullPath = itemURL.path
+                let relPath = fullPath.hasPrefix(projectRoot + "/")
+                    ? String(fullPath.dropFirst(projectRoot.count + 1))
+                    : itemURL.lastPathComponent
+                
+                let mf = lookup[relPath]
+                let matchesName = name.localizedCaseInsensitiveContains(searchText)
+                let matchesMedia = mf.map { file in
+                    (file.codec ?? "").lowercased().contains(query) ||
+                    (file.cameraModel ?? "").lowercased().contains(query) ||
+                    (file.colorSpace ?? "").lowercased().contains(query) ||
+                    (file.resolution ?? "").lowercased().contains(query) ||
+                    file.metadataBadge.lowercased().contains(query) ||
+                    file.visualTags.contains(where: { $0.lowercased().contains(query) }) ||
+                    file.visualDescription.lowercased().contains(query) ||
+                    file.fileExtension.lowercased().contains(query)
+                } ?? false
+                
+                guard matchesName || matchesMedia else { continue }
+                
+                let item = FileSystemItem(
+                    id: fullPath,
+                    name: name,
+                    absolutePath: fullPath,
+                    relativePath: relPath,
+                    isDirectory: false,
+                    fileSize: Int64(resourceValues?.fileSize ?? 0),
+                    dateModified: resourceValues?.contentModificationDate,
+                    fileExtension: itemURL.pathExtension,
+                    mediaFile: mf
+                )
+                results.append(item)
+                if results.count >= 200 { break }
+            }
             
-            guard matchesName || matchesMedia else { continue }
+            return results.sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
+        } else {
+            // Offline: search indexed MediaFile records
+            var results: [FileSystemItem] = []
             
-            let item = FileSystemItem(
-                id: fullPath,
-                name: name,
-                absolutePath: fullPath,
-                relativePath: relPath,
-                isDirectory: false,
-                fileSize: Int64(resourceValues?.fileSize ?? 0),
-                dateModified: resourceValues?.contentModificationDate,
-                fileExtension: itemURL.pathExtension,
-                mediaFile: mf
-            )
-            results.append(item)
+            for mf in project.mediaFiles {
+                let matchesName = mf.filename.localizedCaseInsensitiveContains(searchText)
+                let matchesMedia =
+                    (mf.codec ?? "").lowercased().contains(query) ||
+                    (mf.cameraModel ?? "").lowercased().contains(query) ||
+                    (mf.colorSpace ?? "").lowercased().contains(query) ||
+                    (mf.resolution ?? "").lowercased().contains(query) ||
+                    mf.metadataBadge.lowercased().contains(query) ||
+                    mf.visualTags.contains(where: { $0.lowercased().contains(query) }) ||
+                    mf.visualDescription.lowercased().contains(query) ||
+                    mf.fileExtension.lowercased().contains(query)
+                
+                guard matchesName || matchesMedia else { continue }
+                
+                let item = FileSystemItem(
+                    id: projectRoot + "/" + mf.relativePath,
+                    name: mf.filename,
+                    absolutePath: projectRoot + "/" + mf.relativePath,
+                    relativePath: mf.relativePath,
+                    isDirectory: false,
+                    fileSize: mf.fileSize,
+                    dateModified: mf.dateModified,
+                    fileExtension: mf.fileExtension,
+                    mediaFile: mf
+                )
+                results.append(item)
+                if results.count >= 200 { break }
+            }
             
-            if results.count >= 200 { break } // Cap results
+            return results.sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
         }
-        
-        return results.sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
     }
     
     private var breadcrumbs: [String] {
@@ -269,6 +305,7 @@ struct ProjectFileExplorerView: View {
     }
     
     var body: some View {
+        ZStack {
         VStack(spacing: 0) {
             // Header bar
             explorerHeader
@@ -292,6 +329,22 @@ struct ProjectFileExplorerView: View {
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
+        }
+        
+        // Progress overlay (bottom-right, same as ContentView)
+        if deepMediaService.isIndexing {
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    folderScanProgressPanel
+                        .frame(width: 320)
+                }
+            }
+            .padding(16)
+            .transition(.move(edge: .trailing).combined(with: .opacity))
+            .animation(.spring(response: 0.3), value: deepMediaService.isIndexing)
+        }
         }
         .background(Color(red: 0.09, green: 0.09, blue: 0.12))
         .onAppear {
@@ -348,81 +401,166 @@ struct ProjectFileExplorerView: View {
     
     /// Scan a directory and cache results
     private func scanDirectory(at relativePath: String) {
-        guard isConnected else { return }
-        let fullPath = relativePath.isEmpty ? projectRoot : projectRoot + "/" + relativePath
-        let url = URL(fileURLWithPath: fullPath)
-        
-        guard let contents = try? FileManager.default.contentsOfDirectory(
-            at: url,
-            includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey],
-            options: [.skipsHiddenFiles]
-        ) else { return }
-        
-        let lookup = mediaFileLookup
-        var items: [FileSystemItem] = []
-        
-        for itemURL in contents {
-            let resourceValues = try? itemURL.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
-            let isDir = resourceValues?.isDirectory ?? false
-            let size = Int64(resourceValues?.fileSize ?? 0)
-            let modified = resourceValues?.contentModificationDate
-            let relPath = relativePath.isEmpty ? itemURL.lastPathComponent : relativePath + "/" + itemURL.lastPathComponent
-            
-            let item = FileSystemItem(
-                id: itemURL.path,
-                name: itemURL.lastPathComponent,
-                absolutePath: itemURL.path,
-                relativePath: relPath,
-                isDirectory: isDir,
-                fileSize: size,
-                dateModified: modified,
-                fileExtension: itemURL.pathExtension,
-                mediaFile: lookup[relPath]
-            )
-            items.append(item)
-        }
-        
-        directoryContents[relativePath] = items
-    }
-    
-    /// Scan all folders recursively for the sidebar tree
-    private func scanAllFolders() {
-        guard isConnected else { return }
-        var folders: [FileSystemItem] = []
-        
-        func scanRecursive(_ relativePath: String) {
+        if isConnected {
+            // Online: read from filesystem
             let fullPath = relativePath.isEmpty ? projectRoot : projectRoot + "/" + relativePath
             let url = URL(fileURLWithPath: fullPath)
             
             guard let contents = try? FileManager.default.contentsOfDirectory(
                 at: url,
-                includingPropertiesForKeys: [.isDirectoryKey],
+                includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey],
                 options: [.skipsHiddenFiles]
             ) else { return }
             
+            let lookup = mediaFileLookup
+            var items: [FileSystemItem] = []
+            
             for itemURL in contents {
-                let isDir = (try? itemURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
-                if isDir {
-                    let relPath = relativePath.isEmpty ? itemURL.lastPathComponent : relativePath + "/" + itemURL.lastPathComponent
+                let resourceValues = try? itemURL.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
+                let isDir = resourceValues?.isDirectory ?? false
+                let size = Int64(resourceValues?.fileSize ?? 0)
+                let modified = resourceValues?.contentModificationDate
+                let relPath = relativePath.isEmpty ? itemURL.lastPathComponent : relativePath + "/" + itemURL.lastPathComponent
+                
+                let item = FileSystemItem(
+                    id: itemURL.path,
+                    name: itemURL.lastPathComponent,
+                    absolutePath: itemURL.path,
+                    relativePath: relPath,
+                    isDirectory: isDir,
+                    fileSize: size,
+                    dateModified: modified,
+                    fileExtension: itemURL.pathExtension,
+                    mediaFile: lookup[relPath]
+                )
+                items.append(item)
+            }
+            
+            directoryContents[relativePath] = items
+        } else {
+            // Offline: build from indexed MediaFile records
+            let prefix = relativePath.isEmpty ? "" : relativePath + "/"
+            var items: [FileSystemItem] = []
+            var seenFolders: Set<String> = []
+            
+            for mf in project.mediaFiles {
+                let rp = mf.relativePath
+                // Match files in this directory level
+                let remainder: String
+                if prefix.isEmpty {
+                    remainder = rp
+                } else {
+                    guard rp.hasPrefix(prefix) else { continue }
+                    remainder = String(rp.dropFirst(prefix.count))
+                }
+                
+                let parts = remainder.split(separator: "/")
+                if parts.count == 1 {
+                    // Direct child file
                     let item = FileSystemItem(
-                        id: itemURL.path,
-                        name: itemURL.lastPathComponent,
-                        absolutePath: itemURL.path,
-                        relativePath: relPath,
-                        isDirectory: true,
-                        fileSize: 0,
-                        dateModified: nil,
-                        fileExtension: "",
-                        mediaFile: nil
+                        id: projectRoot + "/" + rp,
+                        name: mf.filename,
+                        absolutePath: projectRoot + "/" + rp,
+                        relativePath: rp,
+                        isDirectory: false,
+                        fileSize: mf.fileSize,
+                        dateModified: mf.dateModified,
+                        fileExtension: mf.fileExtension,
+                        mediaFile: mf
                     )
-                    folders.append(item)
-                    scanRecursive(relPath)
+                    items.append(item)
+                } else if parts.count > 1 {
+                    // Subfolder — synthesize folder entry
+                    let folderName = String(parts[0])
+                    let folderRelPath = prefix + folderName
+                    if !seenFolders.contains(folderRelPath) {
+                        seenFolders.insert(folderRelPath)
+                        let item = FileSystemItem(
+                            id: projectRoot + "/" + folderRelPath,
+                            name: folderName,
+                            absolutePath: projectRoot + "/" + folderRelPath,
+                            relativePath: folderRelPath,
+                            isDirectory: true,
+                            fileSize: 0,
+                            dateModified: nil,
+                            fileExtension: "",
+                            mediaFile: nil
+                        )
+                        items.append(item)
+                    }
                 }
             }
+            
+            directoryContents[relativePath] = items
         }
-        
-        scanRecursive("")
-        folderTreeItems = folders
+    }
+    
+    /// Scan all folders recursively for the sidebar tree
+    private func scanAllFolders() {
+        if isConnected {
+            // Online: enumerate filesystem
+            var folders: [FileSystemItem] = []
+            
+            func scanRecursive(_ relativePath: String) {
+                let fullPath = relativePath.isEmpty ? projectRoot : projectRoot + "/" + relativePath
+                let url = URL(fileURLWithPath: fullPath)
+                
+                guard let contents = try? FileManager.default.contentsOfDirectory(
+                    at: url,
+                    includingPropertiesForKeys: [.isDirectoryKey],
+                    options: [.skipsHiddenFiles]
+                ) else { return }
+                
+                for itemURL in contents {
+                    let isDir = (try? itemURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
+                    if isDir {
+                        let relPath = relativePath.isEmpty ? itemURL.lastPathComponent : relativePath + "/" + itemURL.lastPathComponent
+                        let item = FileSystemItem(
+                            id: itemURL.path,
+                            name: itemURL.lastPathComponent,
+                            absolutePath: itemURL.path,
+                            relativePath: relPath,
+                            isDirectory: true,
+                            fileSize: 0,
+                            dateModified: nil,
+                            fileExtension: "",
+                            mediaFile: nil
+                        )
+                        folders.append(item)
+                        scanRecursive(relPath)
+                    }
+                }
+            }
+            
+            scanRecursive("")
+            folderTreeItems = folders
+        } else {
+            // Offline: extract unique folder paths from indexed MediaFile records
+            var folderPaths: Set<String> = []
+            for mf in project.mediaFiles {
+                let parts = mf.relativePath.split(separator: "/").dropLast() // Remove filename
+                var accumulated = ""
+                for part in parts {
+                    accumulated = accumulated.isEmpty ? String(part) : accumulated + "/" + String(part)
+                    folderPaths.insert(accumulated)
+                }
+            }
+            
+            folderTreeItems = folderPaths.sorted().map { path in
+                let name = path.split(separator: "/").last.map(String.init) ?? path
+                return FileSystemItem(
+                    id: projectRoot + "/" + path,
+                    name: name,
+                    absolutePath: projectRoot + "/" + path,
+                    relativePath: path,
+                    isDirectory: true,
+                    fileSize: 0,
+                    dateModified: nil,
+                    fileExtension: "",
+                    mediaFile: nil
+                )
+            }
+        }
     }
     
     // MARK: - Folder Tree Helpers
@@ -457,6 +595,132 @@ struct ProjectFileExplorerView: View {
     
     // MARK: - Header
     
+    // MARK: - Folder Scan Progress Panel
+    
+    private var folderScanProgressPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                // Mini progress ring
+                ZStack {
+                    Circle()
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 3)
+                        .frame(width: 32, height: 32)
+                    Circle()
+                        .trim(from: 0, to: deepMediaService.indexingProgress)
+                        .stroke(
+                            LinearGradient(colors: [.cyan, .blue], startPoint: .topLeading, endPoint: .bottomTrailing),
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                        )
+                        .frame(width: 32, height: 32)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeInOut(duration: 0.3), value: deepMediaService.indexingProgress)
+                    Image(systemName: "brain")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.cyan)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Scanning Folder")
+                        .font(.system(size: 12, weight: .semibold))
+                    HStack(spacing: 4) {
+                        Text("\(deepMediaService.indexingFilesProcessed) / \(deepMediaService.indexingFilesTotal) files")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                        if !deepMediaService.indexingElapsedTime.isEmpty {
+                            Text("· \(deepMediaService.indexingElapsedTime)")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                                .monospacedDigit()
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(Int(deepMediaService.indexingProgress * 100))%")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(.cyan)
+                        .monospacedDigit()
+                    if !deepMediaService.indexingEstimatedTimeRemaining.isEmpty {
+                        HStack(spacing: 2) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 7))
+                                .foregroundStyle(.cyan.opacity(0.6))
+                            Text("~\(deepMediaService.indexingEstimatedTimeRemaining)")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(.cyan.opacity(0.7))
+                                .monospacedDigit()
+                        }
+                    }
+                }
+                
+                Button {
+                    deepMediaService.stopIndexing()
+                } label: {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .frame(width: 24, height: 24)
+                        .background(.red.opacity(0.25))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help("Stop scanning")
+            }
+            
+            // Status line
+            if !deepMediaService.indexingStatus.isEmpty {
+                Text(deepMediaService.indexingStatus)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .animation(.easeInOut(duration: 0.15), value: deepMediaService.indexingStatus)
+            }
+            
+            // AI counters
+            if deepMediaService.ollamaService.descriptionsGenerated > 0 || deepMediaService.ollamaService.descriptionsFailed > 0 {
+                HStack(spacing: 12) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "brain")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.cyan)
+                        Text("\(deepMediaService.ollamaService.descriptionsGenerated) described")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(.cyan)
+                            .monospacedDigit()
+                    }
+                    if deepMediaService.ollamaService.descriptionsFailed > 0 {
+                        HStack(spacing: 3) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 8))
+                                .foregroundStyle(.orange)
+                            Text("\(deepMediaService.ollamaService.descriptionsFailed) failed")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.orange)
+                                .monospacedDigit()
+                        }
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(
+                    LinearGradient(
+                        colors: [.cyan.opacity(0.3), .blue.opacity(0.15), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: .cyan.opacity(0.08), radius: 12, y: 4)
+    }
+    
     private var explorerHeader: some View {
         HStack(spacing: 12) {
             // Back button
@@ -486,6 +750,16 @@ struct ProjectFileExplorerView: View {
             Text(project.displayName)
                 .font(.system(size: 13, weight: .semibold))
             
+            if !isConnected {
+                Text("📦 Offline")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.orange.opacity(0.12))
+                    .clipShape(Capsule())
+            }
+            
             // Breadcrumbs
             if !breadcrumbs.isEmpty {
                 ForEach(Array(breadcrumbs.enumerated()), id: \.offset) { idx, crumb in
@@ -507,7 +781,60 @@ struct ProjectFileExplorerView: View {
             
             Spacer()
             
-
+            // Scan current folder button
+            Menu {
+                Button {
+                    guard !deepMediaService.isIndexing else { return }
+                    Task {
+                        await deepMediaService.deepIndexFolder(
+                            project,
+                            folderRelativePath: currentPath,
+                            modelContext: modelContext,
+                            useMotionScan: false
+                        )
+                        scanDirectory(at: currentPath)
+                    }
+                } label: {
+                    Label("Frames Only (Fast)", systemImage: "photo.on.rectangle")
+                }
+                Button {
+                    guard !deepMediaService.isIndexing else { return }
+                    Task {
+                        await deepMediaService.deepIndexFolder(
+                            project,
+                            folderRelativePath: currentPath,
+                            modelContext: modelContext,
+                            useMotionScan: true
+                        )
+                        scanDirectory(at: currentPath)
+                    }
+                } label: {
+                    Label("Enhanced Motion (Video)", systemImage: "video.fill")
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    if deepMediaService.isIndexing {
+                        ProgressView()
+                            .controlSize(.mini)
+                    } else {
+                        Image(systemName: "brain")
+                            .font(.system(size: 10))
+                    }
+                    Text(deepMediaService.isIndexing ? "Scanning…" : "Scan Folder")
+                        .font(.system(size: 11, weight: .medium))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 7, weight: .bold))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(deepMediaService.isIndexing ? Color.cyan.opacity(0.15) : Color.cyan.opacity(0.1))
+                .foregroundStyle(.cyan)
+                .clipShape(Capsule())
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .disabled(deepMediaService.isIndexing || !isConnected)
+            .help("Deep scan the current folder with AI")
             
             // View toggle
             Picker("", selection: $viewMode) {

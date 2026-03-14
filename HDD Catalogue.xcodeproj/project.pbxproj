@@ -52,6 +52,7 @@
 		A10000010000000000000044 /* DeepMediaSearchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000044 /* DeepMediaSearchOverlay.swift */; };
 		A10000010000000000000045 /* FileTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000045 /* FileTreeView.swift */; };
 		A10000010000000000000046 /* OllamaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000046 /* OllamaService.swift */; };
+				A10000010000000000000099 /* XattrMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000099 /* XattrMetadataService.swift */; };
 		A10000010000000000000053 /* OllamaSetupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000053 /* OllamaSetupService.swift */; };
 		A10000010000000000000047 /* MediaFileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000047 /* MediaFileExplorerView.swift */; };
 		A10000010000000000000048 /* ProjectFileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000048 /* ProjectFileExplorerView.swift */; };
@@ -110,6 +111,7 @@
 		A20000010000000000000044 /* DeepMediaSearchOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepMediaSearchOverlay.swift; sourceTree = "<group>"; };
 		A20000010000000000000045 /* FileTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeView.swift; sourceTree = "<group>"; };
 		A20000010000000000000046 /* OllamaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaService.swift; sourceTree = "<group>"; };
+				A20000010000000000000099 /* XattrMetadataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XattrMetadataService.swift; sourceTree = "<group>"; };
 		A20000010000000000000053 /* OllamaSetupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaSetupService.swift; sourceTree = "<group>"; };
 		A20000010000000000000047 /* MediaFileExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaFileExplorerView.swift; sourceTree = "<group>"; };
 		A20000010000000000000048 /* ProjectFileExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFileExplorerView.swift; sourceTree = "<group>"; };
@@ -186,6 +188,7 @@
 				A20000010000000000000039 /* VisualSearchService.swift */,
 				A20000010000000000000043 /* DeepMediaSearchService.swift */,
 				A20000010000000000000046 /* OllamaService.swift */,
+								A20000010000000000000099 /* XattrMetadataService.swift */,
 				A20000010000000000000053 /* OllamaSetupService.swift */,
 				A20000010000000000000055 /* CheckForUpdatesViewModel.swift */,
 			);
@@ -351,6 +354,7 @@
 				A10000010000000000000044 /* DeepMediaSearchOverlay.swift in Sources */,
 				A10000010000000000000045 /* FileTreeView.swift in Sources */,
 				A10000010000000000000046 /* OllamaService.swift in Sources */,
+								A10000010000000000000099 /* XattrMetadataService.swift in Sources */,
 				A10000010000000000000053 /* OllamaSetupService.swift in Sources */,
 				A10000010000000000000047 /* MediaFileExplorerView.swift in Sources */,
 				A10000010000000000000048 /* ProjectFileExplorerView.swift in Sources */,

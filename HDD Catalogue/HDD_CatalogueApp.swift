@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Sparkle
 
 @main
 struct HDD_CatalogueApp: App {
@@ -7,6 +8,7 @@ struct HDD_CatalogueApp: App {
     @State private var scanEngine = ScanEngine()
     @State private var undoService = UndoManagerService()
     @State private var showMainWindow = false
+    @StateObject private var updateViewModel = CheckForUpdatesViewModel()
     
     let sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -66,6 +68,12 @@ struct HDD_CatalogueApp: App {
         .defaultSize(width: 1200, height: 800)
         .modelContainer(sharedModelContainer)
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") {
+                    updateViewModel.checkForUpdates()
+                }
+                .disabled(!updateViewModel.canCheckForUpdates)
+            }
             CommandGroup(replacing: .undoRedo) {
                 Button("Undo \(undoService.undoManager.undoActionName)") {
                     undoService.undoManager.undo()
@@ -100,7 +108,10 @@ struct HDD_CatalogueApp: App {
         
         // Settings Window
         Settings {
-            SettingsView()
+            SettingsView(
+                checkForUpdatesAction: { updateViewModel.checkForUpdates() },
+                canCheckForUpdates: updateViewModel.canCheckForUpdates
+            )
         }
         .modelContainer(sharedModelContainer)
     }

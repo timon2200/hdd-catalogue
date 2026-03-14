@@ -1,0 +1,126 @@
+name: Release & Update
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  SCHEME: "HDD Catalogue"
+  APP_NAME: "HDD Catalogue"
+  BUNDLE_ID: "com.timonterzic.HDD-Catalogue"
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.2.app
+
+      - name: Build Archive
+        run: |
+          xcodebuild archive \
+            -project "HDD Catalogue.xcodeproj" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/HDD_Catalogue.xcarchive" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=NO
+
+      - name: Export App
+        run: |
+          mkdir -p "$RUNNER_TEMP/export"
+          cp -R "$RUNNER_TEMP/HDD_Catalogue.xcarchive/Products/Applications/$APP_NAME.app" \
+                "$RUNNER_TEMP/export/$APP_NAME.app"
+
+      - name: Create ZIP
+        run: |
+          cd "$RUNNER_TEMP/export"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_NAME.app" "$APP_NAME.zip"
+          echo "ZIP_PATH=$RUNNER_TEMP/export/$APP_NAME.zip" >> "$GITHUB_ENV"
+
+      - name: Get Version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Building version: $VERSION"
+
+      - name: Sign Update with Sparkle
+        if: env.SPARKLE_KEY != ''
+        env:
+          SPARKLE_KEY: ${{ secrets.SPARKLE_KEY }}
+        run: |
+          # Download Sparkle tools
+          SPARKLE_VERSION="2.6.4"
+          curl -LO "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          mkdir -p sparkle-tools
+          tar -xf "Sparkle-${SPARKLE_VERSION}.tar.xz" -C sparkle-tools
+          
+          # Sign the update
+          SIGNATURE=$(echo "$SPARKLE_KEY" | sparkle-tools/bin/sign_update "$ZIP_PATH")
+          echo "SPARKLE_SIGNATURE=$SIGNATURE" >> "$GITHUB_ENV"
+          echo "Update signed successfully"
+
+      - name: Generate Appcast Entry
+        run: |
+          ZIP_SIZE=$(stat -f%z "$ZIP_PATH")
+          TAG="${GITHUB_REF_NAME}"
+          DOWNLOAD_URL="https://github.com/timon2200/hdd-catalogue/releases/download/${TAG}/${APP_NAME}.zip"
+          DATE=$(date -R)
+          
+          # Build the appcast item
+          ITEM="    <item>
+              <title>Version ${VERSION}</title>
+              <pubDate>${DATE}</pubDate>
+              <sparkle:version>${VERSION}</sparkle:version>
+              <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+              <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+              <enclosure
+                url=\"${DOWNLOAD_URL}\"
+                length=\"${ZIP_SIZE}\"
+                type=\"application/octet-stream\"
+                ${SPARKLE_SIGNATURE:+sparkle:edSignature=\"${SPARKLE_SIGNATURE}\"}
+              />
+            </item>"
+          
+          echo "APPCAST_ITEM<<EOF" >> "$GITHUB_ENV"
+          echo "$ITEM" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+
+      - name: Update Appcast
+        run: |
+          # Insert new item before the closing </channel> tag
+          sed -i '' "s|</channel>|${APPCAST_ITEM}\n  </channel>|" appcast.xml
+          cat appcast.xml
+
+      - name: Commit Appcast
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          git add appcast.xml
+          git commit -m "chore: update appcast for ${GITHUB_REF_NAME}" || echo "No changes to commit"
+          git push
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "HDD Catalogue ${{ env.VERSION }}"
+          body: |
+            ## HDD Catalogue ${{ env.VERSION }}
+            
+            ### Installation
+            1. Download `HDD Catalogue.zip` below
+            2. Unzip and drag `HDD Catalogue.app` to your Applications folder
+            3. Launch — updates will be automatic from now on
+            
+            ---
+            _Built automatically from tag ${{ github.ref_name }}_
+          files: ${{ env.ZIP_PATH }}
+          draft: false
+          prerelease: false

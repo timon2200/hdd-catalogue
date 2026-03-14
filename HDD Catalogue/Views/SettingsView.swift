@@ -4,6 +4,8 @@ import ServiceManagement
 
 /// Settings view for API key, scan preferences, and launch-at-login.
 struct SettingsView: View {
+    var checkForUpdatesAction: (() -> Void)?
+    var canCheckForUpdates: Bool?
     @State private var scanDepth: Int = 1
     @State private var loginItemError: String?
     
@@ -12,6 +14,7 @@ struct SettingsView: View {
     @AppStorage("autoScanOnMount") private var autoScanOnMount = true
     @AppStorage("showNotifications") private var showNotifications = true
     @AppStorage("enableVisualIndexing") private var enableVisualIndexing = true
+    @AppStorage("autoCheckForUpdates") private var autoCheckForUpdates = true
     @AppStorage("ollamaModel") private var ollamaModel = "qwen3.5:0.8b"
     @AppStorage("ollamaReasoningModel") private var ollamaReasoningModel = "qwen3.5:4b"
     @State private var showRebuildConfirm = false
@@ -68,9 +71,16 @@ struct SettingsView: View {
                     Text("HDD Catalogue")
                         .fontWeight(.semibold)
                     Spacer()
-                    Text("Version 1.0")
+                    Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"))")
                         .foregroundStyle(.secondary)
                 }
+                
+                Button("Check for Updates…") {
+                    checkForUpdatesAction?()
+                }
+                .disabled(!(canCheckForUpdates ?? true))
+                
+                Toggle("Automatically check for updates", isOn: $autoCheckForUpdates)
             } header: {
                 Text("About")
             }

@@ -31,6 +31,6 @@
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/timon2200/hdd-catalogue/main/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>REPLACE_WITH_YOUR_PUBLIC_EDDSA_KEY</string>
+	<string>zk/W/QrgmPGh+uycXRmXHH4203f+8VNR2kvZ4uzPU90=</string>
 </dict>
 </plist>

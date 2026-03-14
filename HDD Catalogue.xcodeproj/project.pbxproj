@@ -7,56 +7,57 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A10000010000000000000001 /* HDD_CatalogueApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001; };
-		A10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000002; };
-		A10000010000000000000003 /* Drive.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003; };
-		A10000010000000000000004 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004; };
-		A10000010000000000000005 /* Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000005; };
-		A10000010000000000000006 /* DuplicateGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006; };
-		A10000010000000000000007 /* ColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007; };
-		A10000010000000000000008 /* DriveMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008; };
-		A10000010000000000000009 /* ScanEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009; };
-		A10000010000000000000010 /* GeminiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010; };
-		A10000010000000000000011 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011; };
-		A10000010000000000000012 /* ThumbnailManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000012; };
-		A10000010000000000000013 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000013; };
-		A10000010000000000000014 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000014; };
-		A10000010000000000000015 /* CatalogueGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000015; };
-		A10000010000000000000016 /* ProjectCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000016; };
-		A10000010000000000000017 /* ThumbnailPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000017; };
-		A10000010000000000000018 /* DuplicateResolutionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000018; };
-		A10000010000000000000019 /* ProjectEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000019; };
-		A10000010000000000000020 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020; };
-		A10000010000000000000021 /* ScanProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000021; };
-		A10000010000000000000022 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000022; };
-		A10000010000000000000023 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000025; };
-		A10000010000000000000024 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000026; };
-		A10000010000000000000025 /* ClientManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000027; };
-		A10000010000000000000026 /* UndoManagerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000028; };
-		A10000010000000000000027 /* AIThinkingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000029; };
-		A10000010000000000000030 /* MediaSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000030; };
-		A10000010000000000000031 /* VideoThumbnailService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000031; };
-		A10000010000000000000032 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032; };
-		A10000010000000000000033 /* TagInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000033; };
-		A10000010000000000000034 /* QuickSearchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000034; };
-		A10000010000000000000035 /* SmartBin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000035; };
-		A10000010000000000000036 /* SmartBinEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000036; };
-		A10000010000000000000037 /* RecentlyModifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000037; };
-		A10000010000000000000038 /* ProjectDrawerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000038; };
-		A10000010000000000000039 /* VisualSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000039; };
-		A10000010000000000000040 /* VisualSearchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000040; };
-		A10000010000000000000041 /* FindSimilarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000041; };
-		A10000010000000000000042 /* MediaFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000042; };
-		A10000010000000000000043 /* DeepMediaSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000043; };
-		A10000010000000000000044 /* DeepMediaSearchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000044; };
-		A10000010000000000000045 /* FileTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000045; };
-		A10000010000000000000046 /* OllamaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000046; };
-		A10000010000000000000047 /* MediaFileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000047; };
-		A10000010000000000000048 /* ProjectFileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000048; };
-		A10000010000000000000049 /* StorageDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000049; };
-		A10000010000000000000050 /* ArchiveSuggestionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000050; };
-		A10000010000000000000051 /* DriveComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000051; };
-		A10000010000000000000052 /* FileTypeSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000052; };
+		4ACC8DF42F65B71B005C38DB /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 4ACC8DF32F65B71B005C38DB /* Sparkle */; };
+		A10000010000000000000001 /* HDD_CatalogueApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001 /* HDD_CatalogueApp.swift */; };
+		A10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000002 /* ContentView.swift */; };
+		A10000010000000000000003 /* Drive.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003 /* Drive.swift */; };
+		A10000010000000000000004 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* Project.swift */; };
+		A10000010000000000000005 /* Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000005 /* Client.swift */; };
+		A10000010000000000000006 /* DuplicateGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* DuplicateGroup.swift */; };
+		A10000010000000000000007 /* ColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007 /* ColorPalette.swift */; };
+		A10000010000000000000008 /* DriveMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* DriveMonitor.swift */; };
+		A10000010000000000000009 /* ScanEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* ScanEngine.swift */; };
+		A10000010000000000000010 /* GeminiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* GeminiService.swift */; };
+		A10000010000000000000011 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* KeychainHelper.swift */; };
+		A10000010000000000000012 /* ThumbnailManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000012 /* ThumbnailManager.swift */; };
+		A10000010000000000000013 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000013 /* MenuBarView.swift */; };
+		A10000010000000000000014 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000014 /* SidebarView.swift */; };
+		A10000010000000000000015 /* CatalogueGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000015 /* CatalogueGridView.swift */; };
+		A10000010000000000000016 /* ProjectCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000016 /* ProjectCardView.swift */; };
+		A10000010000000000000017 /* ThumbnailPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000017 /* ThumbnailPickerView.swift */; };
+		A10000010000000000000018 /* DuplicateResolutionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000018 /* DuplicateResolutionView.swift */; };
+		A10000010000000000000019 /* ProjectEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000019 /* ProjectEditView.swift */; };
+		A10000010000000000000020 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020 /* SettingsView.swift */; };
+		A10000010000000000000021 /* ScanProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000021 /* ScanProgressView.swift */; };
+		A10000010000000000000022 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000022 /* Assets.xcassets */; };
+		A10000010000000000000023 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000025 /* NotificationService.swift */; };
+		A10000010000000000000024 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000026 /* ExportService.swift */; };
+		A10000010000000000000025 /* ClientManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000027 /* ClientManagementView.swift */; };
+		A10000010000000000000026 /* UndoManagerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000028 /* UndoManagerService.swift */; };
+		A10000010000000000000027 /* AIThinkingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000029 /* AIThinkingPanel.swift */; };
+		A10000010000000000000030 /* MediaSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000030 /* MediaSummary.swift */; };
+		A10000010000000000000031 /* VideoThumbnailService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000031 /* VideoThumbnailService.swift */; };
+		A10000010000000000000032 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* ProjectDetailView.swift */; };
+		A10000010000000000000033 /* TagInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000033 /* TagInputView.swift */; };
+		A10000010000000000000034 /* QuickSearchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000034 /* QuickSearchOverlay.swift */; };
+		A10000010000000000000035 /* SmartBin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000035 /* SmartBin.swift */; };
+		A10000010000000000000036 /* SmartBinEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000036 /* SmartBinEditorView.swift */; };
+		A10000010000000000000037 /* RecentlyModifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000037 /* RecentlyModifiedView.swift */; };
+		A10000010000000000000038 /* ProjectDrawerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000038 /* ProjectDrawerView.swift */; };
+		A10000010000000000000039 /* VisualSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000039 /* VisualSearchService.swift */; };
+		A10000010000000000000040 /* VisualSearchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000040 /* VisualSearchOverlay.swift */; };
+		A10000010000000000000041 /* FindSimilarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000041 /* FindSimilarSheet.swift */; };
+		A10000010000000000000042 /* MediaFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000042 /* MediaFile.swift */; };
+		A10000010000000000000043 /* DeepMediaSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000043 /* DeepMediaSearchService.swift */; };
+		A10000010000000000000044 /* DeepMediaSearchOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000044 /* DeepMediaSearchOverlay.swift */; };
+		A10000010000000000000045 /* FileTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000045 /* FileTreeView.swift */; };
+		A10000010000000000000046 /* OllamaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000046 /* OllamaService.swift */; };
+		A10000010000000000000047 /* MediaFileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000047 /* MediaFileExplorerView.swift */; };
+		A10000010000000000000048 /* ProjectFileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000048 /* ProjectFileExplorerView.swift */; };
+		A10000010000000000000049 /* StorageDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000049 /* StorageDashboardView.swift */; };
+		A10000010000000000000050 /* ArchiveSuggestionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000050 /* ArchiveSuggestionsView.swift */; };
+		A10000010000000000000051 /* DriveComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000051 /* DriveComparisonView.swift */; };
+		A10000010000000000000052 /* FileTypeSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000052 /* FileTypeSearchView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -89,7 +90,6 @@
 		A20000010000000000000027 /* ClientManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientManagementView.swift; sourceTree = "<group>"; };
 		A20000010000000000000028 /* UndoManagerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoManagerService.swift; sourceTree = "<group>"; };
 		A20000010000000000000029 /* AIThinkingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIThinkingPanel.swift; sourceTree = "<group>"; };
-		A30000010000000000000001 /* HDD Catalogue.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "HDD Catalogue.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000010000000000000030 /* MediaSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaSummary.swift; sourceTree = "<group>"; };
 		A20000010000000000000031 /* VideoThumbnailService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoThumbnailService.swift; sourceTree = "<group>"; };
 		A20000010000000000000032 /* ProjectDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailView.swift; sourceTree = "<group>"; };
@@ -113,6 +113,7 @@
 		A20000010000000000000050 /* ArchiveSuggestionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveSuggestionsView.swift; sourceTree = "<group>"; };
 		A20000010000000000000051 /* DriveComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveComparisonView.swift; sourceTree = "<group>"; };
 		A20000010000000000000052 /* FileTypeSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTypeSearchView.swift; sourceTree = "<group>"; };
+		A30000010000000000000001 /* HDD Catalogue.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "HDD Catalogue.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -120,13 +121,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4ACC8DF42F65B71B005C38DB /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		A50000010000000000000001 /* Root */ = {
+		A50000010000000000000001 = {
 			isa = PBXGroup;
 			children = (
 				A50000010000000000000002 /* HDD Catalogue */,
@@ -268,7 +270,10 @@
 				en,
 				Base,
 			);
-			mainGroup = A50000010000000000000001 /* Root */;
+			mainGroup = A50000010000000000000001;
+			packageReferences = (
+				4ACC8DF22F65B71B005C38DB /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			productRefGroup = A50000010000000000000006 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -549,6 +554,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4ACC8DF22F65B71B005C38DB /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4ACC8DF32F65B71B005C38DB /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4ACC8DF22F65B71B005C38DB /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A90000010000000000000001 /* Project object */;
 }

@@ -33,6 +33,7 @@ struct ContentView: View {
     @State private var filterTags: Set<String> = []
     @State private var showQuickSearch = false
     @State private var selectedSmartBin: SmartBin?
+    @State private var showStorageDashboard = false
     
     // Visual Search & Drawer
     @State private var findSimilarProject: Project?
@@ -139,20 +140,33 @@ struct ContentView: View {
                 duplicateCount: activeDuplicates.count,
                 showDuplicates: $showDuplicates,
                 onScanDrive: { drive in
+                    showStorageDashboard = false
                     Task { await scanAndCategorize(drive: drive) }
                 },
                 onScanAll: {
+                    showStorageDashboard = false
                     Task { await scanAllDrives() }
                 },
+                showStorageDashboard: $showStorageDashboard,
                 onSelectSmartBin: { bin in
                     selectedSmartBin = bin
                     selectedDrive = nil
                     selectedClient = nil
+                    showStorageDashboard = false
                 }
             )
             .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
+            .onChange(of: selectedDrive) { _, _ in showStorageDashboard = false }
+            .onChange(of: selectedClient) { _, _ in showStorageDashboard = false }
         } detail: {
-            if let explorerProj = explorerProject {
+            if showStorageDashboard {
+                StorageDashboardView(
+                    drives: Array(drives),
+                    projects: Array(projects),
+                    clients: Array(clients)
+                )
+                .transition(.opacity)
+            } else if let explorerProj = explorerProject {
                 ProjectFileExplorerView(
                     project: explorerProj,
                     isPresented: $explorerProject,

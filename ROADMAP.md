@@ -92,29 +92,29 @@
 
 > Understand your storage situation at a glance.
 
-### 📈 Storage Dashboard
-- [ ] Total storage used across all catalogued drives
-- [ ] Storage breakdown per client (pie/bar chart)
-- [ ] Growth trends over time (track catalogue snapshots)
-- [ ] "Which drive has the most free space?" quick answer
-- [ ] Some drives are SSDs and some are HDDs. We always want to keep ssds free and offload as much as possible to HDDs. 
+### 📈 Storage Dashboard ✅
+- [x] Total storage used across all catalogued drives
+- [x] Storage breakdown per client (pie/bar chart)
+- [x] Growth trends over time (track catalogue snapshots)
+- [x] "Which drive has the most free space?" quick answer
+- [x] Some drives are SSDs and some are HDDs. We always want to keep ssds free and offload as much as possible to HDDs. 
 
-### 📦 Archive Suggestions
-- [ ] AI-powered suggestions for projects that could be archived
-- [ ] Criteria: last modified > 6 months, deliverables present, not tagged as active
-- [ ] One-click "mark as archived" action
-- [ ] Archive report showing potential space savings
+### 📦 Archive Suggestions ✅
+- [x] AI-powered suggestions for projects that could be archived
+- [x] Criteria: last modified > 6 months, deliverables present, not tagged as active
+- [x] One-click "mark as archived" action
+- [x] Archive report showing potential space savings
 
-### 🔄 Drive Comparison View
-- [ ] Side-by-side view of two drives
-- [ ] Highlight projects that exist on both (backups)
-- [ ] Identify projects only on one drive (not backed up)
-- [ ] Useful for manual backup verification
+### 🔄 Drive Comparison View ✅
+- [x] Side-by-side view of two drives
+- [x] Highlight projects that exist on both (backups)
+- [x] Identify projects only on one drive (not backed up)
+- [x] Useful for manual backup verification
 
-### 🔎 File Type Search
-- [ ] "Where did I put that?" — search for specific file types across all projects
-- [ ] Find all projects containing `.mogrt`, `.prproj`, `.r3d`, etc.
-- [ ] Results grouped by drive with file counts
+### 🔎 File Type Search ✅
+- [x] "Where did I put that?" — search for specific file types across all projects
+- [x] Find all projects containing `.mogrt`, `.prproj`, `.r3d`, etc.
+- [x] Results grouped by drive with file counts
 
 ### 🔬 Deep File Metadata Inspector ✅ *(inspired by Diem)*
 - [x] Per-file metadata panel: codec, pixel format, bitrate, frame rate, resolution
@@ -134,6 +134,24 @@
 
 ### 🎨 App Icon
 - [ ] Design a proper app icon (external drive + catalogue concept)
+
+### 📌 Favorites & Sorting ✅
+- [x] Pin/favorite projects — pinned projects always appear at the top of the grid
+- [x] Pin toggle via context menu on project cards and list rows
+- [x] Pin badge overlay on project card thumbnails
+- [x] Sort controls — sort by Date, Name, Size, Client, Status, or Completeness
+- [x] Ascending/descending toggle with visual indicator in toolbar
+- [x] Enhanced status bar — shows total storage, client count, drive count, offline count, pinned count
+
+### ✨ UI Polish ✅
+- [x] Premium hover animation on project cards (scale + shadow lift with spring physics)
+- [x] Gradient capacity bars in sidebar — color shifts green → yellow → orange → red based on usage
+
+### 🧹 Code Quality ✅
+- [x] Shared `TagColorHelper` — consolidated duplicated tag color logic from 3 separate files
+- [x] Cached `DateFormatter` in `Project.formattedDate` — eliminates expensive re-creation per call
+- [x] Smart bin deletion registers with undo manager (⌘Z support)
+- [x] Fixed `var` → `let` code smell in `ProjectFileExplorerView`
 
 ### ♿ Accessibility
 - [ ] VoiceOver labels for all interactive elements

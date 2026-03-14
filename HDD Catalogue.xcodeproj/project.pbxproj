@@ -53,6 +53,10 @@
 		A10000010000000000000046 /* OllamaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000046; };
 		A10000010000000000000047 /* MediaFileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000047; };
 		A10000010000000000000048 /* ProjectFileExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000048; };
+		A10000010000000000000049 /* StorageDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000049; };
+		A10000010000000000000050 /* ArchiveSuggestionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000050; };
+		A10000010000000000000051 /* DriveComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000051; };
+		A10000010000000000000052 /* FileTypeSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000052; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -105,6 +109,10 @@
 		A20000010000000000000046 /* OllamaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaService.swift; sourceTree = "<group>"; };
 		A20000010000000000000047 /* MediaFileExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaFileExplorerView.swift; sourceTree = "<group>"; };
 		A20000010000000000000048 /* ProjectFileExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFileExplorerView.swift; sourceTree = "<group>"; };
+		A20000010000000000000049 /* StorageDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageDashboardView.swift; sourceTree = "<group>"; };
+		A20000010000000000000050 /* ArchiveSuggestionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveSuggestionsView.swift; sourceTree = "<group>"; };
+		A20000010000000000000051 /* DriveComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveComparisonView.swift; sourceTree = "<group>"; };
+		A20000010000000000000052 /* FileTypeSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTypeSearchView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -201,6 +209,10 @@
 				A20000010000000000000045 /* FileTreeView.swift */,
 				A20000010000000000000047 /* MediaFileExplorerView.swift */,
 				A20000010000000000000048 /* ProjectFileExplorerView.swift */,
+				A20000010000000000000049 /* StorageDashboardView.swift */,
+				A20000010000000000000050 /* ArchiveSuggestionsView.swift */,
+				A20000010000000000000051 /* DriveComparisonView.swift */,
+				A20000010000000000000052 /* FileTypeSearchView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -327,6 +339,10 @@
 				A10000010000000000000046 /* OllamaService.swift in Sources */,
 				A10000010000000000000047 /* MediaFileExplorerView.swift in Sources */,
 				A10000010000000000000048 /* ProjectFileExplorerView.swift in Sources */,
+				A10000010000000000000049 /* StorageDashboardView.swift in Sources */,
+				A10000010000000000000050 /* ArchiveSuggestionsView.swift in Sources */,
+				A10000010000000000000051 /* DriveComparisonView.swift in Sources */,
+				A10000010000000000000052 /* FileTypeSearchView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

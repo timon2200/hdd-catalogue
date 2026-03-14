@@ -27,15 +27,84 @@ struct CatalogueGridView: View {
     @State private var showThumbnailPicker: Project?
     @State private var projectToDelete: Project?
     @State private var viewMode: ViewMode = .grid
+    @State private var sortBy: SortOption = .date
+    @State private var sortAscending: Bool = false
     
     enum ViewMode: String, CaseIterable {
         case grid = "Grid"
         case list = "List"
     }
     
+    enum SortOption: String, CaseIterable {
+        case date = "Date"
+        case name = "Name"
+        case size = "Size"
+        case client = "Client"
+        case status = "Status"
+        case completeness = "Completeness"
+        
+        var icon: String {
+            switch self {
+            case .date: return "calendar"
+            case .name: return "textformat.abc"
+            case .size: return "externaldrive"
+            case .client: return "person.2"
+            case .status: return "circle.lefthalf.filled"
+            case .completeness: return "chart.pie"
+            }
+        }
+    }
+    
     private let gridColumns = [
         GridItem(.adaptive(minimum: 280, maximum: 380), spacing: 16)
     ]
+    
+    /// Projects sorted by user's chosen criteria, with favorites pinned to top.
+    private var sortedProjects: [Project] {
+        let sorted: [Project]
+        switch sortBy {
+        case .date:
+            sorted = projects.sorted {
+                let d0 = $0.projectDate ?? .distantPast
+                let d1 = $1.projectDate ?? .distantPast
+                return sortAscending ? d0 < d1 : d0 > d1
+            }
+        case .name:
+            sorted = projects.sorted {
+                sortAscending
+                    ? $0.displayName.localizedCompare($1.displayName) == .orderedAscending
+                    : $0.displayName.localizedCompare($1.displayName) == .orderedDescending
+            }
+        case .size:
+            sorted = projects.sorted {
+                sortAscending ? $0.sizeBytes < $1.sizeBytes : $0.sizeBytes > $1.sizeBytes
+            }
+        case .client:
+            sorted = projects.sorted {
+                let c0 = $0.client?.name ?? "zzz"
+                let c1 = $1.client?.name ?? "zzz"
+                return sortAscending ? c0 < c1 : c0 > c1
+            }
+        case .status:
+            let order: [ProjectStatus] = [.new, .inProgress, .review, .delivered, .archived]
+            sorted = projects.sorted {
+                let i0 = order.firstIndex(of: $0.projectStatus) ?? 0
+                let i1 = order.firstIndex(of: $1.projectStatus) ?? 0
+                return sortAscending ? i0 < i1 : i0 > i1
+            }
+        case .completeness:
+            sorted = projects.sorted {
+                sortAscending
+                    ? $0.projectCompleteness < $1.projectCompleteness
+                    : $0.projectCompleteness > $1.projectCompleteness
+            }
+        }
+        
+        // Pin favorites to the top
+        let favorites = sorted.filter(\.isFavorite)
+        let rest = sorted.filter { !$0.isFavorite }
+        return favorites + rest
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -51,9 +120,9 @@ struct CatalogueGridView: View {
             
             // Content
             ScrollView {
-                if projects.isEmpty && searchText.isEmpty {
+                if sortedProjects.isEmpty && searchText.isEmpty {
                     emptyStateView
-                } else if !projects.isEmpty {
+                } else if !sortedProjects.isEmpty {
                     // Dashboard stats header
                     if showDashboard {
                         dashboardHeader
@@ -65,7 +134,7 @@ struct CatalogueGridView: View {
                             groupedGridView
                         } else {
                             LazyVGrid(columns: gridColumns, spacing: 16) {
-                                ForEach(projects, id: \.id) { project in
+                                ForEach(sortedProjects, id: \.id) { project in
                                     ProjectCardView(
                                         project: project,
                                         onEdit: { selectedProject = project },
@@ -85,7 +154,7 @@ struct CatalogueGridView: View {
                         
                     case .list:
                         LazyVStack(spacing: 2) {
-                            ForEach(projects, id: \.id) { project in
+                            ForEach(sortedProjects, id: \.id) { project in
                                 projectListRow(project)
                             }
                         }
@@ -150,14 +219,52 @@ struct CatalogueGridView: View {
         }
         .toolbar {
             ToolbarItem(placement: .automatic) {
-                Picker("View", selection: $viewMode) {
-                    Image(systemName: "square.grid.2x2")
-                        .tag(ViewMode.grid)
-                    Image(systemName: "list.bullet")
-                        .tag(ViewMode.list)
+                HStack(spacing: 8) {
+                    // Sort controls
+                    Menu {
+                        ForEach(SortOption.allCases, id: \.self) { option in
+                            Button {
+                                if sortBy == option {
+                                    sortAscending.toggle()
+                                } else {
+                                    sortBy = option
+                                    sortAscending = option == .name
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: option.icon)
+                                    Text(option.rawValue)
+                                    if sortBy == option {
+                                        Image(systemName: sortAscending ? "chevron.up" : "chevron.down")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(.system(size: 11))
+                            Text(sortBy.rawValue)
+                                .font(.system(size: 11))
+                            Image(systemName: sortAscending ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 8, weight: .bold))
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                    .help("Sort projects")
+                    
+                    // View toggle
+                    Picker("View", selection: $viewMode) {
+                        Image(systemName: "square.grid.2x2")
+                            .tag(ViewMode.grid)
+                        Image(systemName: "list.bullet")
+                            .tag(ViewMode.list)
+                    }
+                    .pickerStyle(.segmented)
+                    .help("Toggle grid/list view")
                 }
-                .pickerStyle(.segmented)
-                .help("Toggle grid/list view")
             }
         }
         .sheet(item: $showThumbnailPicker) { project in
@@ -685,6 +792,11 @@ struct CatalogueGridView: View {
         Button("Delete Project", role: .destructive) {
             projectToDelete = project
         }
+        Divider()
+        Button(project.isFavorite ? "Unpin" : "Pin to Top") {
+            project.isFavorite.toggle()
+            try? modelContext.save()
+        }
     }
     
     // MARK: - Actions
@@ -820,13 +932,25 @@ struct CatalogueGridView: View {
     
     private var statusBar: some View {
         HStack {
-            let drives = Set(projects.compactMap(\.drive?.id))
-            let clientCount = Set(projects.compactMap(\.client?.id)).count
-            let nleCount = projects.filter { !$0.detectedNLEs.isEmpty }.count
+            let driveSet = Set(sortedProjects.compactMap(\.drive?.id))
+            let clientCount = Set(sortedProjects.compactMap(\.client?.id)).count
+            let connectedCount = sortedProjects.filter { $0.drive?.isConnected == true }.count
+            let totalSize = sortedProjects.reduce(Int64(0)) { $0 + $1.sizeBytes }
+            let favCount = sortedProjects.filter(\.isFavorite).count
             
-            Text("\(projects.count) projects · \(clientCount) clients · \(drives.count) drives · \(nleCount) with NLE")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            HStack(spacing: 14) {
+                statusItem("\(sortedProjects.count)", label: "projects", icon: "folder.fill", color: .blue)
+                statusItem("\(clientCount)", label: "clients", icon: "person.2.fill", color: .purple)
+                statusItem("\(driveSet.count)", label: "drives", icon: "externaldrive.fill", color: .green)
+                statusItem(ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file), label: "total", icon: "internaldisk", color: .orange)
+                
+                if connectedCount < sortedProjects.count {
+                    statusItem("\(sortedProjects.count - connectedCount)", label: "offline", icon: "eject.fill", color: .gray)
+                }
+                if favCount > 0 {
+                    statusItem("\(favCount)", label: "pinned", icon: "pin.fill", color: .yellow)
+                }
+            }
             
             Spacer()
             
@@ -843,6 +967,17 @@ struct CatalogueGridView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(.ultraThinMaterial)
+    }
+    
+    private func statusItem(_ value: String, label: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 8))
+                .foregroundStyle(color.opacity(0.7))
+            Text("\(value) \(label)")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+        }
     }
     
     // MARK: - File Search Results

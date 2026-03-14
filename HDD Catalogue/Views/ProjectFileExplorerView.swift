@@ -368,7 +368,7 @@ struct ProjectFileExplorerView: View {
             let modified = resourceValues?.contentModificationDate
             let relPath = relativePath.isEmpty ? itemURL.lastPathComponent : relativePath + "/" + itemURL.lastPathComponent
             
-            var item = FileSystemItem(
+            let item = FileSystemItem(
                 id: itemURL.path,
                 name: itemURL.lastPathComponent,
                 absolutePath: itemURL.path,
@@ -379,7 +379,6 @@ struct ProjectFileExplorerView: View {
                 fileExtension: itemURL.pathExtension,
                 mediaFile: lookup[relPath]
             )
-            _ = item // Suppress warning
             items.append(item)
         }
         

@@ -102,6 +102,12 @@ HDD Catalogue/
     ├── ThumbnailPickerView.swift    # Three-tab thumbnail picker
     ├── DuplicateResolutionView.swift # Side-by-side duplicate comparison
     ├── ScanProgressView.swift       # Animated scanning overlay
+    ├── StorageDashboardView.swift   # Storage intelligence dashboard
+    ├── ArchiveSuggestionsView.swift  # AI-powered archive recommendations
+    ├── DriveComparisonView.swift    # Side-by-side drive comparison
+    ├── FileTypeSearchView.swift     # Cross-drive file type search
+    ├── TagColorHelper.swift         # Shared tag color utilities
+    ├── TagInputView.swift           # Tag input with autocomplete
     └── SettingsView.swift           # General / AI / Scanning tabs
 ```
 
@@ -142,6 +148,12 @@ HDD Catalogue/
 - **Per-Camera LUTs** — Automatically selects the correct LUT based on detected camera profile (S-Log3, D-Log M, etc.)
 - **Real-Time Preview** — CoreImage-based LUT application for instant visual feedback
 
+### Storage Intelligence
+- **Storage Dashboard** — Total storage across all drives, per-client breakdown (pie/bar chart), SSD vs HDD usage, growth trends, and "most free space" quick answer
+- **Archive Suggestions** — AI-powered recommendations for projects that could be archived based on age, deliverables, and activity status, with space savings report
+- **Drive Comparison** — Side-by-side view of two drives highlighting shared projects (backups) and unique projects (not backed up)
+- **File Type Search** — Cross-drive search for specific file types (`.prproj`, `.r3d`, `.mogrt`, etc.) with results grouped by drive
+
 ### UI
 - **Grid + List Views** — Toggle between visual card grid and compact list
 - **Client Color System** — 20 curated colors auto-assigned to clients, visible as accent strips on cards and dots in the sidebar
@@ -151,6 +163,10 @@ HDD Catalogue/
 - **Animated Scan Progress** — Circular progress ring with pulse animation, per-folder updates, and percentage display
 - **Smart Bins** — Auto-filtered project groups (e.g., "Recent", "Large Projects", "Needs Review")
 - **Dashboard View** — Stats header with project counts, total size, and camera distribution
+- **Premium Hover Effects** — Spring-physics scale + shadow lift animations on project cards
+- **Gradient Capacity Bars** — Color shifts green → yellow → orange → red based on drive usage
+- **Favorites / Pinning** — Pin projects to always appear at the top; toggle via context menu
+- **Sort Controls** — Sort by date, name, size, client, status, or completeness with asc/desc toggle
 
 ### Security
 - **Keychain Storage** — API key stored securely in macOS Keychain via `Security.framework`
@@ -279,23 +295,20 @@ erDiagram
 
 ## 🛣️ Roadmap
 
-### High Priority
-- [x] Launch at Login via `SMAppService`
-- [x] Wire `autoScanOnMount` setting to `DriveMonitor`
-- [x] Wire `scanDepth` setting to `ScanEngine`
+See [ROADMAP.md](ROADMAP.md) for the full feature roadmap with phases.
+
+### Recently Completed
+- [x] Storage Dashboard with per-client breakdown, SSD/HDD tracking, growth trends
+- [x] AI-powered Archive Suggestions with space savings report
+- [x] Drive Comparison View (side-by-side backup verification)
+- [x] File Type Search across all drives
+- [x] Favorites / Pinning with sort controls
+- [x] Premium hover animations and gradient capacity bars
+- [x] Shared `TagColorHelper` and cached `DateFormatter` (code quality)
+
+### Up Next
 - [ ] App icon design
-
-### Medium Priority
-- [x] System notifications for scan completion and new drives
-- [x] Delete projects, drives, and clients from UI
-- [x] Client management (rename, recolor, merge)
-- [x] Export catalogue to CSV/JSON
-- [x] Advanced filtering (date range, size, type)
-
-### Future
 - [ ] IOKit-based drive serial number and type detection
-- [x] Undo support for edits and dismissals
-- [x] Multi-level scan depth (nested project discovery)
 - [ ] Accessibility / VoiceOver labels
 - [ ] Unit and UI tests
 

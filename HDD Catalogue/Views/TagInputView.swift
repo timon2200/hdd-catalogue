@@ -99,9 +99,9 @@ struct TagInputView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(tagColor(for: tag).opacity(0.15), in: Capsule())
-        .foregroundStyle(tagColor(for: tag))
-        .overlay(Capsule().stroke(tagColor(for: tag).opacity(0.3), lineWidth: 1))
+        .background(TagColorHelper.color(for: tag).opacity(0.15), in: Capsule())
+        .foregroundStyle(TagColorHelper.color(for: tag))
+        .overlay(Capsule().stroke(TagColorHelper.color(for: tag).opacity(0.3), lineWidth: 1))
         .transition(.scale.combined(with: .opacity))
     }
     
@@ -124,12 +124,7 @@ struct TagInputView: View {
         showSuggestions = false
     }
     
-    private func tagColor(for tag: String) -> Color {
-        // Deterministic color from tag name hash
-        let hash = abs(tag.hashValue)
-        let colors: [Color] = [.blue, .purple, .pink, .orange, .teal, .indigo, .mint, .cyan]
-        return colors[hash % colors.count]
-    }
+
 }
 
 // MARK: - Flow Layout

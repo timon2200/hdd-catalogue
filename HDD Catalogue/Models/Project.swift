@@ -63,6 +63,9 @@ final class Project {
     var visualTags: [String]         // e.g. ["sunset", "interview", "outdoor", "aerial"]
     var visualDescription: String    // AI-generated description of visual content
     
+    // Favorites
+    var isFavorite: Bool
+    
     // Phase 5: Deep Media Index
     var isDeepIndexed: Bool
     var lastDeepIndexDate: Date?
@@ -116,6 +119,9 @@ final class Project {
         self.visualDescription = ""
         self.statusRaw = ProjectStatus.new.rawValue
         
+        // Favorites
+        self.isFavorite = false
+        
         // Phase 5 defaults
         self.isDeepIndexed = false
         self.lastDeepIndexDate = nil
@@ -140,12 +146,16 @@ final class Project {
         ByteCountFormatter.string(fromByteCount: sizeBytes, countStyle: .file)
     }
     
-    var formattedDate: String {
-        guard let date = projectDate else { return "Unknown" }
+    private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        return formatter.string(from: date)
+        return formatter
+    }()
+    
+    var formattedDate: String {
+        guard let date = projectDate else { return "Unknown" }
+        return Self.dateFormatter.string(from: date)
     }
     
     /// Best date for this project — prefers NLE project file date over folder date.

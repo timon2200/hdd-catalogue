@@ -15,6 +15,7 @@ struct SidebarView: View {
     @Binding var showDuplicates: Bool
     let onScanDrive: (Drive) -> Void
     let onScanAll: () -> Void
+    @Binding var showStorageDashboard: Bool
     
     @Environment(\.modelContext) private var modelContext
     @Environment(UndoManagerService.self) private var undoService
@@ -74,6 +75,24 @@ struct SidebarView: View {
                             }
                         }
                 }
+            }
+            
+            // STORAGE Section
+            Section {
+                Button {
+                    showStorageDashboard = true
+                    selectedDrive = nil
+                    selectedClient = nil
+                } label: {
+                    Label {
+                        Text("Storage Dashboard")
+                            .fontWeight(showStorageDashboard ? .semibold : .regular)
+                    } icon: {
+                        Image(systemName: "internaldisk")
+                            .foregroundStyle(.orange)
+                    }
+                }
+                .buttonStyle(.plain)
             }
             
             // CLIENTS Section
@@ -162,6 +181,7 @@ struct SidebarView: View {
                         }
                         Divider()
                         Button("Delete", role: .destructive) {
+                            undoService.registerSmartBinDeletion(smartBin: bin, context: modelContext)
                             modelContext.delete(bin)
                             try? modelContext.save()
                         }
@@ -237,7 +257,7 @@ struct SidebarView: View {
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: filterTags.contains(item.tag) ? "tag.fill" : "tag")
-                                    .foregroundStyle(tagColor(for: item.tag))
+                                    .foregroundStyle(TagColorHelper.color(for: item.tag))
                                     .frame(width: 16)
                                 
                                 Text(item.tag)
@@ -286,36 +306,6 @@ struct SidebarView: View {
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 8) {
                 Divider()
-                
-                // AI Visual Search button
-                Button {
-                    NotificationCenter.default.post(name: .toggleVisualSearch, object: nil)
-                } label: {
-                    HStack {
-                        Image(systemName: "sparkle.magnifyingglass")
-                        Text("AI Visual Search")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                }
-                .buttonStyle(.bordered)
-                .tint(.purple)
-                .padding(.horizontal, 12)
-                
-                // Deep Media Search button
-                Button {
-                    NotificationCenter.default.post(name: .toggleDeepMediaSearch, object: nil)
-                } label: {
-                    HStack {
-                        Image(systemName: "doc.text.magnifyingglass")
-                        Text("Deep Media Search")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                }
-                .buttonStyle(.bordered)
-                .tint(.cyan)
-                .padding(.horizontal, 12)
                 
                 Button {
                     onScanAll()
@@ -436,13 +426,19 @@ struct SidebarView: View {
                             .foregroundStyle(.secondary)
                         
                         if connected {
-                            // Capacity bar
+                            // Gradient capacity bar
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
                                     Capsule()
                                         .fill(.quaternary)
                                     Capsule()
-                                        .fill(drive.usagePercentage > 0.9 ? .red : .blue)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: driveBarColors(for: drive.usagePercentage),
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
                                         .frame(width: geo.size.width * drive.usagePercentage)
                                 }
                                 .frame(height: 4)
@@ -495,10 +491,18 @@ struct SidebarView: View {
             .map { $0 }
     }
     
-    private func tagColor(for tag: String) -> Color {
-        let hash = abs(tag.hashValue)
-        let colors: [Color] = [.blue, .purple, .pink, .orange, .teal, .indigo, .mint, .cyan]
-        return colors[hash % colors.count]
+
+    // MARK: - Drive Bar Colors
+    
+    /// Returns gradient colors based on usage percentage: green → yellow → orange → red
+    private func driveBarColors(for usage: Double) -> [Color] {
+        switch usage {
+        case 0.9...:     return [.orange, .red]
+        case 0.7..<0.9:  return [.yellow, .orange]
+        case 0.5..<0.7:  return [.green, .yellow]
+        default:         return [.green, .green.opacity(0.7)]
+        }
     }
 }
+
 

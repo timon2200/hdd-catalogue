@@ -129,8 +129,8 @@ struct ProjectCardView: View {
                                 .font(.system(size: 9, weight: .medium))
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(tagColor(for: tag).opacity(0.15), in: Capsule())
-                                .foregroundStyle(tagColor(for: tag))
+                                .background(TagColorHelper.color(for: tag).opacity(0.15), in: Capsule())
+                                .foregroundStyle(TagColorHelper.color(for: tag))
                         }
                         if project.tags.count > 3 {
                             Text("+\(project.tags.count - 3)")
@@ -177,10 +177,12 @@ struct ProjectCardView: View {
                 )
         }
         .compositingGroup()
-        .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+        .scaleEffect(isHovering ? 1.02 : 1.0)
+        .shadow(color: .black.opacity(isHovering ? 0.35 : 0.25), radius: isHovering ? 14 : 8, y: isHovering ? 7 : 4)
         .opacity(project.drive?.isConnected == false ? 0.5 : 1.0)
         .contentShape(Rectangle())
         .onHover { isHovering = $0 }
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovering)
         .onTapGesture(count: 2) { if let onOpenExplorer { onOpenExplorer() } else { onShowDetail() } }
         .onTapGesture { onShowDetail() }
         .contextMenu { contextMenuContent }
@@ -259,6 +261,22 @@ struct ProjectCardView: View {
                             .padding(8)
                             .background(.ultraThinMaterial, in: Circle())
                             .padding(10)
+                    }
+                }
+            }
+            
+            // Pinned/favorite badge (bottom-left)
+            if project.isFavorite {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.yellow)
+                            .padding(6)
+                            .background(.black.opacity(0.5), in: Circle())
+                            .padding(8)
+                        Spacer()
                     }
                 }
             }
@@ -440,6 +458,12 @@ struct ProjectCardView: View {
             }
         }
         
+        Divider()
+        Button(project.isFavorite ? "Unpin" : "Pin to Top") {
+            project.isFavorite.toggle()
+            try? modelContext.save()
+        }
+        
         if project.isVisuallyIndexed {
             Divider()
             Button("Find Similar") {
@@ -451,11 +475,7 @@ struct ProjectCardView: View {
         }
     }
     
-    private func tagColor(for tag: String) -> Color {
-        let hash = abs(tag.hashValue)
-        let colors: [Color] = [.blue, .purple, .pink, .orange, .teal, .indigo, .mint, .cyan]
-        return colors[hash % colors.count]
-    }
+
     
     // MARK: - Drag & Drop
     

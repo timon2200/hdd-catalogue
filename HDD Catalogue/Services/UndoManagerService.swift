@@ -369,4 +369,42 @@ final class UndoManagerService {
         }
         undoManager.setActionName("Merge Clients")
     }
+    
+    // MARK: - Generic Undo
+    
+    /// Register a simple undo action with a closure.
+    func registerGenericUndo(name: String, undoAction: @escaping () -> Void) {
+        undoManager.registerUndo(withTarget: self) { _ in
+            undoAction()
+        }
+        undoManager.setActionName(name)
+    }
+    
+    // MARK: - Smart Bin Deletion Undo
+    
+    func registerSmartBinDeletion(
+        smartBin: SmartBin,
+        context: ModelContext
+    ) {
+        undoManager.registerUndo(withTarget: self) { [weak self] service in
+            context.insert(smartBin)
+            try? context.save()
+            
+            // Register redo
+            self?.registerSmartBinRedeletion(smartBin: smartBin, context: context)
+        }
+        undoManager.setActionName("Delete Smart Bin")
+    }
+    
+    private func registerSmartBinRedeletion(
+        smartBin: SmartBin,
+        context: ModelContext
+    ) {
+        undoManager.registerUndo(withTarget: self) { [weak self] service in
+            context.delete(smartBin)
+            try? context.save()
+            self?.registerSmartBinDeletion(smartBin: smartBin, context: context)
+        }
+        undoManager.setActionName("Delete Smart Bin")
+    }
 }

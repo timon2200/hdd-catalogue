@@ -1451,12 +1451,14 @@ struct ProjectFileExplorerView: View {
             } else if item.isImage {
                 // Use CGImageSource for image metadata
                 guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil) else {
-                    await MainActor.run { liveMetadata = meta }
+                    let result = meta
+                    await MainActor.run { liveMetadata = result }
                     return
                 }
                 
                 guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else {
-                    await MainActor.run { liveMetadata = meta }
+                    let result = meta
+                    await MainActor.run { liveMetadata = result }
                     return
                 }
                 

@@ -47,11 +47,12 @@ final class DriveMonitor {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let url = notification.userInfo?[NSWorkspace.volumeURLUserInfoKey] as? URL else { return }
+            guard let self,
+                  let url = notification.userInfo?[NSWorkspace.volumeURLUserInfoKey] as? URL else { return }
             let path = url.path
             let name = url.lastPathComponent
             Task { @MainActor in
-                self?.handleMount(volumeURL: url, volumePath: path, volumeName: name)
+                self.handleMount(volumeURL: url, volumePath: path, volumeName: name)
             }
         }
         
@@ -61,10 +62,11 @@ final class DriveMonitor {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let url = notification.userInfo?[NSWorkspace.volumeURLUserInfoKey] as? URL else { return }
+            guard let self,
+                  let url = notification.userInfo?[NSWorkspace.volumeURLUserInfoKey] as? URL else { return }
             let path = url.path
             Task { @MainActor in
-                self?.handleUnmount(volumePath: path)
+                self.handleUnmount(volumePath: path)
             }
         }
     }

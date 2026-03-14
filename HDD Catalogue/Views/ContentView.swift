@@ -405,12 +405,14 @@ struct ContentView: View {
     // MARK: - Drive Monitoring & Scanning
     
     private func setupDriveMonitoring() {
-        driveMonitor.startMonitoring(
-            modelContext: modelContext,
-            scanEngine: scanEngine
-        ) { drive in
-            if autoScanOnMount {
-                Task { await scanAndCategorize(drive: drive) }
+        Task { @MainActor in
+            driveMonitor.startMonitoring(
+                modelContext: modelContext,
+                scanEngine: scanEngine
+            ) { drive in
+                if autoScanOnMount {
+                    Task { await scanAndCategorize(drive: drive) }
+                }
             }
         }
     }
@@ -787,8 +789,9 @@ struct ContentView: View {
                 }
             }
             
+            let categorizedCount = allCategorizations.count
             await MainActor.run {
-                geminiService.currentStep = "Categorized \(allCategorizations.count)/\(targetProjects.count) projects"
+                geminiService.currentStep = "Categorized \(categorizedCount)/\(targetProjects.count) projects"
             }
             
             // Pass 2: Detect duplicates across all drives

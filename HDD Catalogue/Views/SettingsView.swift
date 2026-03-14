@@ -18,7 +18,11 @@ struct SettingsView: View {
     @AppStorage("ollamaModel") private var ollamaModel = "qwen3.5:0.8b"
     @AppStorage("ollamaReasoningModel") private var ollamaReasoningModel = "qwen3.5:4b"
     @State private var showRebuildConfirm = false
-    @State private var ollamaAvailable = false
+    @State private var setupService = OllamaSetupService()
+    @State private var showUninstallConfirm = false
+    @State private var showDeleteModelConfirm: String?
+    @State private var showSetupLog = false
+    @State private var isQuickSetupRunning = false
     
     var body: some View {
         TabView {
@@ -37,7 +41,7 @@ struct SettingsView: View {
                     Label("Scanning", systemImage: "doc.viewfinder")
                 }
         }
-        .frame(width: 480, height: 380)
+        .frame(width: 520, height: 520)
         .onAppear {
             scanDepth = storedScanDepth
         }
@@ -115,53 +119,16 @@ struct SettingsView: View {
     
     private var aiTab: some View {
         Form {
-            Section {
-                Picker("Vision Model", selection: $ollamaModel) {
-                    ForEach(OllamaService.supportedModels) { model in
-                        Text("\(model.name) (\(model.size))")
-                            .tag(model.id)
-                    }
-                }
-                Text("Used for image descriptions during deep indexing. Smaller = faster.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                
-                Picker("Reasoning Model", selection: $ollamaReasoningModel) {
-                    ForEach(OllamaService.supportedModels) { model in
-                        Text("\(model.name) (\(model.size))")
-                            .tag(model.id)
-                    }
-                }
-                Text("Used for project categorization, duplicate detection, and AI search. Bigger = smarter.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                
-                HStack {
-                    Circle()
-                        .fill(ollamaAvailable ? .green : .red)
-                        .frame(width: 8, height: 8)
-                    Text(ollamaAvailable ? "Ollama is running" : "Ollama not detected")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Check") {
-                        Task {
-                            let service = OllamaService()
-                            service.currentModel = ollamaModel
-                            await service.checkAvailability()
-                            ollamaAvailable = service.isAvailable
-                        }
-                    }
-                    .font(.caption)
-                }
-                
-                Text("Install [Ollama](https://ollama.com) and pull models:\n`ollama pull qwen3.5:0.8b` (vision)\n`ollama pull qwen3.5:4b` (reasoning)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } header: {
-                Text("Local AI (Ollama + Qwen 3.5)")
-            }
+            // Section 1: Ollama Runtime
+            ollamaRuntimeSection
             
+            // Section 2: Model Management
+            modelManagementSection
+            
+            // Section 3: Model Selection
+            modelSelectionSection
+            
+            // Section 4: Visual Search
             Section {
                 Toggle("Enable Visual Indexing", isOn: $enableVisualIndexing)
                 
@@ -172,6 +139,7 @@ struct SettingsView: View {
                 Text("Visual Search")
             }
             
+            // Section 5: Privacy
             Section {
                 Text("• All AI runs 100% locally via Ollama — no data leaves your Mac")
                     .font(.caption)
@@ -192,12 +160,335 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .padding()
         .onAppear {
-            Task {
-                let service = OllamaService()
-                service.currentModel = ollamaModel
-                await service.checkAvailability()
-                ollamaAvailable = service.isAvailable
+            Task { await setupService.refreshStatus() }
+        }
+    }
+    
+    // MARK: - Ollama Runtime Section
+    
+    private var ollamaRuntimeSection: some View {
+        Section {
+            // Status row
+            HStack(spacing: 8) {
+                Image(systemName: ollamaStatusIcon)
+                    .foregroundStyle(ollamaStatusColor)
+                    .font(.title3)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(ollamaStatusText)
+                        .font(.callout)
+                        .fontWeight(.medium)
+                    if let version = setupService.ollamaVersion, setupService.ollamaInstalled {
+                        Text("Version \(version)")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                
+                Spacer()
+                
+                if setupService.isInstallingOllama {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Installing…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if setupService.isUninstallingOllama {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Removing…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
+            
+            // Action buttons
+            HStack(spacing: 8) {
+                if !setupService.ollamaInstalled {
+                    // Not installed — show Install + Quick Setup
+                    Button {
+                        Task { await setupService.installOllama() }
+                    } label: {
+                        Label("Install Ollama", systemImage: "arrow.down.circle")
+                    }
+                    .disabled(setupService.isInstallingOllama)
+                    
+                    Button {
+                        isQuickSetupRunning = true
+                        Task {
+                            await setupService.installEverything()
+                            isQuickSetupRunning = false
+                        }
+                    } label: {
+                        Label("Install Everything", systemImage: "sparkles")
+                    }
+                    .disabled(setupService.isInstallingOllama || isQuickSetupRunning)
+                    .help("Install Ollama + download default AI models (qwen3.5:0.8b + qwen3.5:4b)")
+                } else {
+                    // Installed — show Start/Stop + Uninstall
+                    if setupService.ollamaRunning {
+                        Button {
+                            Task { await setupService.stopServer() }
+                        } label: {
+                            Label("Stop Server", systemImage: "stop.circle")
+                        }
+                    } else {
+                        Button {
+                            Task { await setupService.startServer() }
+                        } label: {
+                            Label("Start Server", systemImage: "play.circle")
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Button(role: .destructive) {
+                        showUninstallConfirm = true
+                    } label: {
+                        Label("Uninstall", systemImage: "trash")
+                    }
+                    .alert("Uninstall Ollama?", isPresented: $showUninstallConfirm) {
+                        Button("Cancel", role: .cancel) { }
+                        Button("Uninstall", role: .destructive) {
+                            Task { await setupService.uninstallOllama() }
+                        }
+                    } message: {
+                        Text("This will remove Ollama and all downloaded models (~/.ollama). You can reinstall at any time.")
+                    }
+                }
+            }
+            
+            // Setup log toggle
+            if !setupService.setupLog.isEmpty {
+                DisclosureGroup("Setup Log", isExpanded: $showSetupLog) {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(setupService.setupLog) { entry in
+                                HStack(spacing: 4) {
+                                    Image(systemName: entry.type.icon)
+                                        .font(.caption2)
+                                        .foregroundStyle(logColor(for: entry.type))
+                                    Text(entry.message)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 80)
+                }
+                .font(.caption)
+            }
+        } header: {
+            Text("Ollama Runtime")
+        }
+    }
+    
+    // MARK: - Model Management Section
+    
+    private var modelManagementSection: some View {
+        Section {
+            ForEach(OllamaService.supportedModels) { model in
+                modelRow(for: model)
+            }
+            
+            // Show any installed models that aren't in the supported list
+            let extraModels = setupService.installedModels.filter { installed in
+                !OllamaService.supportedModels.contains(where: { supported in
+                    installed.name.hasPrefix(supported.id)
+                })
+            }
+            if !extraModels.isEmpty {
+                Divider()
+                ForEach(extraModels) { installed in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(installed.name)
+                                .font(.callout)
+                            Text(installed.formattedSize)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .font(.caption)
+                        
+                        Button(role: .destructive) {
+                            showDeleteModelConfirm = installed.name
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+        } header: {
+            HStack {
+                Text("AI Models")
+                Spacer()
+                if setupService.ollamaRunning {
+                    Button {
+                        Task { await setupService.fetchInstalledModels() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Refresh model list")
+                }
+            }
+        }
+        .alert("Delete Model?", isPresented: Binding(
+            get: { showDeleteModelConfirm != nil },
+            set: { if !$0 { showDeleteModelConfirm = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { showDeleteModelConfirm = nil }
+            Button("Delete", role: .destructive) {
+                if let model = showDeleteModelConfirm {
+                    Task { await setupService.deleteModel(model) }
+                }
+                showDeleteModelConfirm = nil
+            }
+        } message: {
+            Text("Delete \(showDeleteModelConfirm ?? "this model")? You can re-download it later.")
+        }
+    }
+    
+    // MARK: - Model Row
+    
+    @ViewBuilder
+    private func modelRow(for model: OllamaModel) -> some View {
+        let isInstalled = setupService.installedModels.contains(where: { $0.name.hasPrefix(model.id) })
+        let progress = setupService.pullProgress[model.id]
+        
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text(model.name)
+                            .font(.callout)
+                            .fontWeight(.medium)
+                        Text(model.size)
+                            .font(.caption2)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(.quaternary)
+                            .clipShape(Capsule())
+                    }
+                    Text(model.description)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                
+                Spacer()
+                
+                if let progress = progress {
+                    // Currently downloading
+                    if progress.isDownloading {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(progress.percentString)
+                                .font(.caption2)
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Text(progress.status)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                } else if isInstalled {
+                    // Installed
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .font(.caption)
+                        
+                        Button(role: .destructive) {
+                            showDeleteModelConfirm = model.id
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                } else if setupService.ollamaRunning {
+                    // Not installed but Ollama is running
+                    Button {
+                        Task { await setupService.pullModel(model.id) }
+                    } label: {
+                        Label("Install", systemImage: "arrow.down.circle")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                } else {
+                    // Not installed and Ollama not running
+                    Text("—")
+                        .font(.caption)
+                        .foregroundStyle(.quaternary)
+                }
+            }
+            
+            // Progress bar for downloading
+            if let progress = progress, progress.isDownloading {
+                ProgressView(value: progress.fraction)
+                    .progressViewStyle(.linear)
+            }
+        }
+    }
+    
+    // MARK: - Model Selection Section
+    
+    private var modelSelectionSection: some View {
+        Section {
+            let installedIds = Set(setupService.installedModels.map { installedModel -> String in
+                // Match to supported model IDs
+                for supported in OllamaService.supportedModels {
+                    if installedModel.name.hasPrefix(supported.id) {
+                        return supported.id
+                    }
+                }
+                return installedModel.name
+            })
+            
+            Picker("Vision Model", selection: $ollamaModel) {
+                ForEach(OllamaService.supportedModels) { model in
+                    HStack {
+                        Text("\(model.name) (\(model.size))")
+                        if !installedIds.contains(model.id) {
+                            Text("(not installed)")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tag(model.id)
+                }
+            }
+            Text("Used for image descriptions during deep indexing. Smaller = faster.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            
+            Picker("Reasoning Model", selection: $ollamaReasoningModel) {
+                ForEach(OllamaService.supportedModels) { model in
+                    HStack {
+                        Text("\(model.name) (\(model.size))")
+                        if !installedIds.contains(model.id) {
+                            Text("(not installed)")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tag(model.id)
+                }
+            }
+            Text("Used for project categorization, duplicate detection, and AI search. Bigger = smarter.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } header: {
+            Text("Active Models")
         }
     }
     
@@ -236,6 +527,47 @@ struct SettingsView: View {
         .padding()
     }
     
+    // MARK: - Computed Properties
+    
+    private var ollamaStatusIcon: String {
+        if setupService.ollamaInstalled && setupService.ollamaRunning {
+            return "checkmark.circle.fill"
+        } else if setupService.ollamaInstalled {
+            return "exclamationmark.triangle.fill"
+        } else {
+            return "xmark.circle.fill"
+        }
+    }
+    
+    private var ollamaStatusColor: Color {
+        if setupService.ollamaInstalled && setupService.ollamaRunning {
+            return .green
+        } else if setupService.ollamaInstalled {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+    
+    private var ollamaStatusText: String {
+        if setupService.ollamaInstalled && setupService.ollamaRunning {
+            return "Installed & Running"
+        } else if setupService.ollamaInstalled {
+            return "Installed — Server Stopped"
+        } else {
+            return "Not Installed"
+        }
+    }
+    
+    private func logColor(for type: SetupLogEntry.LogType) -> Color {
+        switch type {
+        case .info: return .secondary
+        case .success: return .green
+        case .warning: return .orange
+        case .error: return .red
+        }
+    }
+    
     // MARK: - Helpers
     
     private func toggleLaunchAtLogin(_ enabled: Bool) {
@@ -268,4 +600,3 @@ struct SettingsView: View {
         }
     }
 }
-

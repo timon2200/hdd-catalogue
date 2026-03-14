@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDD Catalogue — Index Your Drives, Find Anything</title>
+    <meta name="description" content="A macOS menu-bar app that automatically indexes your external drives and uses AI to categorize projects, detect duplicates, and keep everything searchable — even offline.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-card-hover: #1a1a26;
+            --border: #1e1e2e;
+            --text: #e4e4ef;
+            --text-muted: #8888a0;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --green: #22c55e;
+            --orange: #f97316;
+            --purple: #a855f7;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Gradient orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .orb-1 { width: 600px; height: 600px; background: var(--accent); top: -200px; right: -200px; }
+        .orb-2 { width: 500px; height: 500px; background: var(--purple); bottom: 20%; left: -150px; }
+        .orb-3 { width: 400px; height: 400px; background: var(--green); bottom: -100px; right: 10%; opacity: 0.08; }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Nav */
+        nav {
+            padding: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .nav-brand img { width: 32px; height: 32px; border-radius: 8px; }
+        .nav-links { display: flex; gap: 24px; align-items: center; }
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 80px 0 60px;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--accent);
+            margin-bottom: 24px;
+        }
+        .hero h1 {
+            font-size: clamp(36px, 6vw, 56px);
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--text) 0%, var(--text-muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 18px;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 36px;
+        }
+        .hero-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.25s ease;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 0 24px var(--accent-glow);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 32px var(--accent-glow);
+        }
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+        }
+
+        /* Screenshot */
+        .screenshot-wrap {
+            margin: 0 auto 80px;
+            max-width: 800px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .screenshot-wrap img {
+            width: 100%;
+            display: block;
+        }
+
+        /* Features */
+        .section-title {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        .section-title h2 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .section-title p {
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 80px;
+        }
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 28px;
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(99, 102, 241, 0.2);
+            transform: translateY(-4px);
+        }
+        .feature-icon {
+            font-size: 28px;
+            margin-bottom: 14px;
+        }
+        .feature-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .feature-card p {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Auto Updates callout */
+        .callout {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08));
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 80px;
+        }
+        .callout h2 { font-size: 24px; margin-bottom: 12px; }
+        .callout p { color: var(--text-muted); font-size: 15px; max-width: 520px; margin: 0 auto; }
+
+        /* Tech stack */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 80px;
+        }
+        .tech-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        .tech-item span:first-child { font-size: 20px; }
+        .tech-label { color: var(--text-muted); font-size: 12px; }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        footer a { color: var(--accent); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 640px) {
+            .hero { padding: 48px 0 40px; }
+            .features-grid { grid-template-columns: 1fr; }
+            .tech-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="container">
+        <nav>
+            <div class="nav-brand">
+                💾 HDD Catalogue
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#tech">Tech</a>
+                <a href="https://github.com/timon2200/hdd-catalogue">GitHub</a>
+                <a href="https://github.com/timon2200/hdd-catalogue/releases/latest" class="btn btn-primary" style="padding: 8px 18px; font-size: 13px;">Download</a>
+            </div>
+        </nav>
+
+        <section class="hero">
+            <div class="hero-badge">✨ Now with auto-updates via Sparkle</div>
+            <h1>Index your drives.<br>Find anything.</h1>
+            <p>A macOS menu-bar app that scans your external drives, uses AI to categorize projects, detects duplicates, and keeps everything searchable — even when drives are offline.</p>
+            <div class="hero-buttons">
+                <a href="https://github.com/timon2200/hdd-catalogue/releases/latest" class="btn btn-primary">
+                    ⬇ Download for macOS
+                </a>
+                <a href="https://github.com/timon2200/hdd-catalogue" class="btn btn-secondary">
+                    View on GitHub
+                </a>
+            </div>
+        </section>
+
+        <div class="screenshot-wrap">
+            <img src="screenshots/main-catalogue.png" alt="HDD Catalogue — Main catalogue view">
+        </div>
+
+        <section id="features">
+            <div class="section-title">
+                <h2>Built for creative professionals</h2>
+                <p>Designed for video editors managing projects across dozens of external drives</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Unified Search</h3>
+                    <p>Search across all projects, clips, and files — by name, codec, camera, visual tags, even AI descriptions. Works offline.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>AI-Powered</h3>
+                    <p>100% local AI via Ollama. Auto-detects cameras, categorizes projects, generates visual tags and descriptions. No data leaves your Mac.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📂</div>
+                    <h3>File Explorer</h3>
+                    <p>Three-panel file explorer with deep metadata — codec, resolution, frame rate, camera model, color space. Video scrubbing on hover.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>LUT Preview</h3>
+                    <p>One-click LOG → Rec.709 conversion. Auto-selects the right LUT based on detected camera profile (S-Log3, D-Log M, etc.).</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <h3>Storage Intelligence</h3>
+                    <p>Dashboard with per-client storage breakdown, SSD/HDD tracking, archive suggestions, and side-by-side drive comparison.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Auto Updates</h3>
+                    <p>Install once — updates arrive automatically via Sparkle. Always on the latest version with zero effort.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📋</div>
+                    <h3>Smart Bins</h3>
+                    <p>Create dynamic project groups with custom filter criteria. New projects matching your rules appear automatically after scans.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏷️</div>
+                    <h3>Tags & Status</h3>
+                    <p>Custom tags, status pipeline (New → In Progress → Review → Delivered → Archived), and per-project notes — all searchable.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📡</div>
+                    <h3>Offline Catalogue</h3>
+                    <p>All metadata persists locally via SwiftData. Browse and search your entire library even with every drive disconnected.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="callout">
+            <h2>🔄 Auto-updates built in</h2>
+            <p>Download once and you're set. HDD Catalogue checks for new versions automatically via <a href="https://sparkle-project.org" style="color: var(--accent);">Sparkle</a> and prompts you to update — one click, no reinstall.</p>
+        </section>
+
+        <section id="tech">
+            <div class="section-title">
+                <h2>Tech Stack</h2>
+            </div>
+
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <span>🟠</span>
+                    <div>
+                        <div>Swift 5.9+</div>
+                        <div class="tech-label">Language</div>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <span>🎨</span>
+                    <div>
+                        <div>SwiftUI</div>
+                        <div class="tech-label">UI Framework</div>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <span>💾</span>
+                    <div>
+                        <div>SwiftData</div>
+                        <div class="tech-label">Persistence</div>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <span>🧠</span>
+                    <div>
+                        <div>Ollama + Qwen 3.5</div>
+                        <div class="tech-label">Local AI</div>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <span>🎬</span>
+                    <div>
+                        <div>AVFoundation</div>
+                        <div class="tech-label">Media Analysis</div>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <span>🔄</span>
+                    <div>
+                        <div>Sparkle 2</div>
+                        <div class="tech-label">OTA Updates</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>Built with ❤️ using SwiftUI, SwiftData, and local AI &nbsp;·&nbsp; <a href="https://github.com/timon2200/hdd-catalogue">GitHub</a> &nbsp;·&nbsp; MIT License</p>
+        </footer>
+    </div>
+</body>
+</html>

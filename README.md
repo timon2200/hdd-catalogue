@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/SwiftData-powered-purple" alt="SwiftData">
   <img src="https://img.shields.io/badge/AI-Gemini%202.0%20Flash-4285F4?logo=google&logoColor=white" alt="Gemini AI">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
+  <a href="https://github.com/timon2200/hdd-catalogue/releases/latest"><img src="https://img.shields.io/github/v/release/timon2200/hdd-catalogue?label=download&logo=github" alt="Download Latest"></a>
 </p>
 
 ---
@@ -174,32 +175,35 @@ HDD Catalogue/
 
 ---
 
-## 🚀 Getting Started
+## 📥 Download & Install
 
-### Prerequisites
-- **macOS 14.0+** (Sonoma or later)
-- **Xcode 15.0+**
-- **Google Gemini API key** (free at [aistudio.google.com](https://aistudio.google.com)) — optional, app works without AI features
+1. **[Download the latest release](https://github.com/timon2200/hdd-catalogue/releases/latest)** — grab `HDD Catalogue.zip`
+2. Unzip and drag **HDD Catalogue.app** into your Applications folder
+3. Launch — the app lives in your **menu bar** (look for the drive icon)
 
-### Build & Run
-
-```bash
-# Clone the repository
-git clone https://github.com/timon2200/hdd-catalogue.git
-cd hdd-catalogue
-
-# Open in Xcode
-open "HDD Catalogue.xcodeproj"
-
-# Build and Run (⌘R)
-```
+> **Auto-updates included.** Once installed, the app checks for new versions automatically via [Sparkle](https://sparkle-project.org). You'll get a prompt whenever a new version is available — one click to update, no reinstall needed.
 
 ### Configure AI (Optional)
 
 1. Open the app (click the drive icon in the menu bar)
 2. Go to **Settings → AI** tab
-3. Paste your Gemini API key and click **Save Key**
-4. The key is stored securely in your macOS Keychain
+3. Install [Ollama](https://ollama.com) and pull the AI models:
+   ```bash
+   ollama pull qwen3.5:0.8b   # vision (fast)
+   ollama pull qwen3.5:4b     # reasoning (smart)
+   ```
+4. The app uses 100% local AI — **no data leaves your Mac**
+
+### Build from Source
+
+```bash
+git clone https://github.com/timon2200/hdd-catalogue.git
+cd hdd-catalogue
+open "HDD Catalogue.xcodeproj"
+# Build and Run (⌘R)
+```
+
+Requires **macOS 14.0+** and **Xcode 15.0+**.
 
 ---
 
@@ -298,13 +302,13 @@ erDiagram
 See [ROADMAP.md](ROADMAP.md) for the full feature roadmap with phases.
 
 ### Recently Completed
+- [x] Over-the-air updates via Sparkle + GitHub Releases
 - [x] Storage Dashboard with per-client breakdown, SSD/HDD tracking, growth trends
 - [x] AI-powered Archive Suggestions with space savings report
 - [x] Drive Comparison View (side-by-side backup verification)
 - [x] File Type Search across all drives
 - [x] Favorites / Pinning with sort controls
 - [x] Premium hover animations and gradient capacity bars
-- [x] Shared `TagColorHelper` and cached `DateFormatter` (code quality)
 
 ### Up Next
 - [ ] App icon design
